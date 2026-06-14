@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+
+  samba:
+    build:
+      context: ./samba
+      dockerfile: Dockerfile
+    container_name: samba-server
+    hostname: samba-server
+    networks:
+      - smb-network
+    ports:
+      - "1137:137/udp"
+      - "1138:138/udp"
+      - "1139:139/tcp"
+      - "445:445/tcp"
+    volumes:
+      - samba-config:/etc/samba
+      - samba-data:/var/lib/samba
+      - ./data/shared:/mnt/shared
+    environment:
+      - WORKGROUP=WORKGROUP
+    healthcheck:
+      test: ["CMD-SHELL", "pidof smbd > /dev/null && echo ok || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: smb-webapp
+    networks:
+      - smb-network
+    ports:
+      - "8080:8080"
+    volumes:
+      - samba-config:/etc/samba
+      - samba-data:/var/lib/samba
+      - ./data/shared:/mnt/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./webapp:/app
+    environment:
+      - SAMBA_CONTAINER=samba-server
+      - SAMBA_CONFIG_PATH=/etc/samba
+      - SAMBA_DATA_PATH=/var/lib/samba
+      - API_HOST=0.0.0.0
+      - API_PORT=8080
+    depends_on:
+      samba:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  smb-network:
+    driver: bridge
+
+volumes:
+  samba-config:
+  samba-data:

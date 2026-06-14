@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMB Manager - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        html, body { height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', sans-serif; }
+        .login-card { width: 100%; max-width: 400px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: white; }
+        .login-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px 16px 0 0; text-align: center; }
+        .login-header h3 { margin: 0; font-weight: 700; }
+        .login-body { padding: 2rem; }
+        .form-control { border-radius: 8px; border: 1px solid #e0e0e0; padding: 0.75rem; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-login { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 0.75rem; font-weight: 600; color: white; width: 100%; cursor: pointer; }
+        .btn-login:hover { background: linear-gradient(135deg, #5568d3 0%, #6a3a8a 100%); color: white; }
+        .form-group { margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <div class="login-header">
+        <i class="bi bi-shield-lock" style="font-size: 2rem;"></i>
+        <h3 class="mt-2">SMB Manager</h3>
+        <small>Enterprise Share Management</small>
+    </div>
+    <div class="login-body">
+        <div id="alert-box"></div>
+        <form id="login-form">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" placeholder="admin" required autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-login"><span id="btn-text">Login</span></button>
+        </form>
+        <hr>
+        <small class="text-muted d-block text-center"><i class="bi bi-info-circle"></i> Secure admin access only</small>
+    </div>
+</div>
+
+<script>
+const form = document.getElementById('login-form');
+const alertBox = document.getElementById('alert-box');
+
+function showAlert(msg, type = 'danger') {
+    alertBox.innerHTML = '<div class="alert alert-' + type + ' show">' + msg + '</div>';
+    setTimeout(() => alertBox.innerHTML = '', 5000);
+}
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!username || !password) {
+        showAlert('Please enter credentials', 'warning');
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            document.cookie = 'access_token=' + data.access_token + '; path=/; max-age=' + data.expires_in;
+            showAlert('✅ Login successful!', 'success');
+            setTimeout(() => window.location.href = '/', 1000);
+        } else {
+            showAlert(data.detail || 'Login failed', 'danger');
+        }
+    } catch (error) {
+        showAlert('Connection error', 'danger');
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+.env
+*.admin
+audit.json
+__pycache__/
+*.pyc
+*.bak
+data/shared/
+.DS_Store
+*.log

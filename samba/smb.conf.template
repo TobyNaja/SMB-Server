@@ -1,0 +1,19 @@
+[global]
+    workgroup = WORKGROUP
+    server string = Docker Samba Server
+    netbios name = DOCKER-SMB
+    security = user
+    passdb backend = tdbsam
+    map to guest = bad user
+    log file = /var/log/samba/log.%m
+    max log size = 1000
+    dns proxy = no
+
+[shared]
+    comment = Shared Storage
+    path = /mnt/shared
+    browseable = yes
+    read only = no
+    guest ok = no
+    create mask = 0755
+    directory mask = 0755
