@@ -29,7 +29,6 @@
             <button class="btn btn-sm btn-outline-danger w-100" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
         </div>
     </nav>
-
     <main class="main-content flex-grow-1 d-flex flex-column">
         <header class="topbar navbar navbar-dark bg-dark px-4 py-2 border-bottom border-secondary">
             <span class="navbar-brand mb-0 h6 text-white"><i class="bi bi-hdd-network"></i> SMB Share Permission Manager</span>
@@ -42,15 +41,14 @@
             <div id="tab-dashboard" class="tab-pane active">
                 <h4 class="mb-4">Dashboard</h4>
                 <div class="row g-3 mb-4">
-                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-primary"><i class="bi bi-people-fill"></i></div><div class="stat-num" id="stat-users">—</div><div class="stat-label">Users</div></div></div></div>
-                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-info"><i class="bi bi-diagram-3-fill"></i></div><div class="stat-num" id="stat-groups">—</div><div class="stat-label">Groups</div></div></div></div>
-                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-warning"><i class="bi bi-folder2-open"></i></div><div class="stat-num" id="stat-shares">—</div><div class="stat-label">Shares</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-primary"><i class="bi bi-people-fill"></i></div><div class="stat-num" id="stat-users">-</div><div class="stat-label">Users</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-info"><i class="bi bi-diagram-3-fill"></i></div><div class="stat-num" id="stat-groups">-</div><div class="stat-label">Groups</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-warning"><i class="bi bi-folder2-open"></i></div><div class="stat-num" id="stat-shares">-</div><div class="stat-label">Shares</div></div></div></div>
                     <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-success"><i class="bi bi-check-circle-fill"></i></div><div class="stat-num text-success" style="font-size:1.5rem">Online</div><div class="stat-label">Status</div></div></div></div>
                 </div>
                 <div class="card"><div class="card-header fw-bold"><i class="bi bi-info-circle"></i> Connection Info</div>
                 <div class="card-body">
                     <p class="mb-1"><i class="bi bi-windows text-info"></i> Windows: <code>\\&lt;IP&gt;\sharename</code></p>
-                    <p class="mb-1"><i class="bi bi-apple"></i> Mac: <code>smb://&lt;IP&gt;/sharename</code></p>
                     <p class="mb-0"><i class="bi bi-book text-primary"></i> API: <a href="/docs" target="_blank">/docs</a></p>
                 </div></div>
             </div>
@@ -89,7 +87,7 @@
                     <h4>Manage Shares</h4>
                     <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalShare"><i class="bi bi-plus-lg"></i> Add Share</button>
                 </div>
-                <div class="row g-3" id="shares-grid"><div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm"></div></div></div>
+                <div class="row g-3" id="shares-grid"></div>
             </div>
 
             <!-- PERMISSIONS -->
@@ -110,14 +108,14 @@
                 <div class="card mb-4" style="max-width:600px">
                     <div class="card-header bg-dark text-white fw-bold"><i class="bi bi-eye-slash-fill"></i> Access Based Share Enumeration (ABSE)</div>
                     <div class="card-body">
-                        <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> เมื่อเปิด ABSE — Users จะ<strong>มองไม่เห็น</strong> Share ที่ไม่มีสิทธิ์เข้าถึง</p>
+                        <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> เมื่อเปิด ABSE Users จะมองไม่เห็น Share ที่ไม่มีสิทธิ์เข้าถึง</p>
                         <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-3">
                             <div><div class="fw-bold">Global ABSE</div><small class="text-muted">ใช้กับทุก Share</small></div>
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="sw-global-abse" role="switch" style="width:3rem;height:1.5rem" onchange="toggleGlobalAbse(this.checked)">
                             </div>
                         </div>
-                        <div id="abse-status" class="alert alert-secondary small mb-0"><i class="bi bi-hourglass"></i> Loading...</div>
+                        <div id="abse-status" class="alert alert-secondary small mb-0">Loading...</div>
                     </div>
                 </div>
                 <div class="card" style="max-width:600px">
@@ -145,182 +143,154 @@
     </main>
 </div>
 
-<!-- MODAL: ADD USER -->
+<!-- MODALS -->
 <div class="modal fade" id="modalUser" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title"><i class="bi bi-person-plus"></i> Add New User</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
+        <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="bi bi-person-plus"></i> Add User</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
-            <div class="mb-3"><label class="form-label">Username *</label><input type="text" class="form-control" id="in-username" placeholder="john_doe"></div>
+            <div class="mb-3"><label class="form-label">Username *</label><input type="text" class="form-control" id="in-username"></div>
             <div class="mb-3"><label class="form-label">Password *</label><input type="password" class="form-control" id="in-password"></div>
             <div class="mb-3"><label class="form-label">Full Name</label><input type="text" class="form-control" id="in-fullname"></div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-primary" onclick="createUser()"><i class="bi bi-check-lg"></i> Create</button>
-        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="createUser()">Create</button></div>
     </div></div>
 </div>
 
-<!-- MODAL: CHANGE PASSWORD -->
 <div class="modal fade" id="modalPassword" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-warning">
-            <h5 class="modal-title"><i class="bi bi-key-fill"></i> Change Password</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
+        <div class="modal-header bg-warning"><h5 class="modal-title"><i class="bi bi-key-fill"></i> Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
-            <p>Change password for: <strong id="pw-username-label"></strong></p>
+            <p>For: <strong id="pw-username-label"></strong></p>
             <div class="mb-3"><label class="form-label">New Password *</label><input type="password" class="form-control" id="in-new-password"></div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-warning" onclick="doChangePassword()"><i class="bi bi-check-lg"></i> Update</button>
-        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" onclick="doChangePassword()">Update</button></div>
     </div></div>
 </div>
 
-<!-- MODAL: ADD GROUP -->
 <div class="modal fade" id="modalGroup" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-info text-white">
-            <h5 class="modal-title"><i class="bi bi-diagram-3"></i> Add New Group</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="mb-3"><label class="form-label">Group Name *</label><input type="text" class="form-control" id="in-groupname" placeholder="developers"></div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-info text-white" onclick="createGroup()"><i class="bi bi-check-lg"></i> Create</button>
-        </div>
+        <div class="modal-header bg-info text-white"><h5 class="modal-title"><i class="bi bi-diagram-3"></i> Add Group</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><div class="mb-3"><label class="form-label">Group Name *</label><input type="text" class="form-control" id="in-groupname"></div></div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-info text-white" onclick="createGroup()">Create</button></div>
     </div></div>
 </div>
 
-<!-- MODAL: ADD GROUP MEMBER -->
 <div class="modal fade" id="modalMembers" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-info text-white">
-            <h5 class="modal-title" id="members-title">Add Member</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" id="in-member-username" placeholder="Enter username">
-                <button class="btn btn-info text-white" onclick="addMember()"><i class="bi bi-plus"></i> Add</button>
-            </div>
-        </div>
+        <div class="modal-header bg-info text-white"><h5 class="modal-title" id="members-title">Add Member</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><div class="input-group"><input type="text" class="form-control" id="in-member-username" placeholder="username"><button class="btn btn-info text-white" onclick="addMember()">Add</button></div></div>
         <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
     </div></div>
 </div>
 
-<!-- MODAL: ADD SHARE -->
 <div class="modal fade" id="modalShare" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-warning">
-            <h5 class="modal-title"><i class="bi bi-folder-plus"></i> Add New Share</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
+        <div class="modal-header bg-warning"><h5 class="modal-title"><i class="bi bi-folder-plus"></i> Add Share</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
-            <div class="mb-3"><label class="form-label">Share Name *</label><input type="text" class="form-control" id="in-sharename" placeholder="documents"></div>
-            <div class="mb-3"><label class="form-label">Path *</label><input type="text" class="form-control" id="in-sharepath" placeholder="/mnt/shared/documents"><div class="form-text">Directory จะถูกสร้างอัตโนมัติ</div></div>
+            <div class="mb-3"><label class="form-label">Share Name *</label><input type="text" class="form-control" id="in-sharename"></div>
+            <div class="mb-3"><label class="form-label">Path *</label><input type="text" class="form-control" id="in-sharepath" placeholder="/mnt/shared/..."></div>
             <div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" id="in-sharecomment"></div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label">Create Mask</label>
+                    <select class="form-select" id="in-create-mask">
+                        <option value="0755">0755 (default)</option>
+                        <option value="0644">0644 (stricter)</option>
+                        <option value="0660">0660 (group)</option>
+                        <option value="0777">0777 (open)</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label">Directory Mask</label>
+                    <select class="form-select" id="in-dir-mask">
+                        <option value="0755">0755 (default)</option>
+                        <option value="0750">0750 (group)</option>
+                        <option value="0770">0770 (group RW)</option>
+                        <option value="0777">0777 (open)</option>
+                    </select>
+                </div>
+            </div>
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="in-browseable" checked><label class="form-check-label">Browseable</label></div>
             <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="in-guestok"><label class="form-check-label">Allow Guest</label></div>
             <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="in-abse"><label class="form-check-label">Enable ABSE</label></div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-warning" onclick="createShare()"><i class="bi bi-check-lg"></i> Create</button>
-        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" onclick="createShare()">Create</button></div>
     </div></div>
 </div>
 
-<!-- MODAL: PERMISSIONS -->
 <div class="modal fade" id="modalPerm" tabindex="-1">
     <div class="modal-dialog modal-lg"><div class="modal-content">
-        <div class="modal-header bg-dark text-white">
-            <h5 class="modal-title" id="perm-modal-title"><i class="bi bi-lock-fill"></i> Permissions</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
+        <div class="modal-header bg-dark text-white"><h5 class="modal-title" id="perm-modal-title"><i class="bi bi-lock-fill"></i> Permissions</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
         <div class="modal-body" id="perm-modal-body"><div class="text-center py-4"><div class="spinner-border text-primary"></div></div></div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-success" onclick="saveModalPermissions()"><i class="bi bi-shield-check"></i> Save</button>
-        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success" onclick="saveModalPermissions()">Save</button></div>
     </div></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const S = { users: [], groups: [], shares: [], currentShare: null, currentGroup: null, pwUsername: null };
+var S = { users: [], groups: [], shares: [], currentShare: null, currentGroup: null, pwUsername: null };
 
-// ── Utilities ──────────────────────────────────
-function showAlert(msg, type = 'success') {
-    const id = 'a' + Date.now();
+function showAlert(msg, type) {
+    type = type || 'success';
+    var id = 'a' + Date.now();
     document.getElementById('alert-box').insertAdjacentHTML('beforeend',
-        '<div id="' + id + '" class="alert alert-' + type + ' alert-dismissible fade show d-flex gap-2">' +
-        msg + '<button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button></div>');
-    setTimeout(() => document.getElementById(id)?.remove(), 5000);
+        '<div id="' + id + '" class="alert alert-' + type + ' alert-dismissible fade show">' +
+        msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+    setTimeout(function() { var el = document.getElementById(id); if (el) el.remove(); }, 5000);
 }
 
 async function api(method, url, body) {
-    const r = await fetch(url, {
-        method,
-        headers: {'Content-Type': 'application/json'},
-        body: body ? JSON.stringify(body) : undefined
-    });
+    var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    var r = await fetch(url, opts);
     if (r.status === 401) { window.location.href = '/login'; return null; }
-    const d = await r.json();
+    var d = await r.json();
     if (!r.ok) throw new Error(d.detail || 'API Error');
     return d;
 }
 
 function showTab(name, el) {
-    document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
     document.getElementById('tab-' + name).classList.add('active');
     if (el) el.classList.add('active');
-    const loaders = { dashboard: loadDashboard, users: loadUsers, groups: loadGroups, shares: loadShares, permissions: initPermissions, settings: loadSettings, audit: loadAudit };
-    loaders[name]?.();
+    var loaders = { dashboard: loadDashboard, users: loadUsers, groups: loadGroups, shares: loadShares, permissions: initPermissions, settings: loadSettings, audit: loadAudit };
+    if (loaders[name]) loaders[name]();
 }
 
-// ── Dashboard ──────────────────────────────────
 async function loadDashboard() {
     try {
-        const [u, g, s] = await Promise.all([api('GET', '/api/users'), api('GET', '/api/groups'), api('GET', '/api/shares')]);
-        document.getElementById('stat-users').textContent = u?.users?.length || 0;
-        document.getElementById('stat-groups').textContent = g?.groups?.length || 0;
-        document.getElementById('stat-shares').textContent = s?.shares?.length || 0;
+        var results = await Promise.all([api('GET','/api/users'), api('GET','/api/groups'), api('GET','/api/shares')]);
+        document.getElementById('stat-users').textContent = results[0] && results[0].users ? results[0].users.length : 0;
+        document.getElementById('stat-groups').textContent = results[1] && results[1].groups ? results[1].groups.length : 0;
+        document.getElementById('stat-shares').textContent = results[2] && results[2].shares ? results[2].shares.length : 0;
     } catch(e) { console.error(e); }
 }
 
-// ── Users ──────────────────────────────────────
 async function loadUsers() {
     try {
-        const d = await api('GET', '/api/users');
-        S.users = d?.users || [];
-        document.getElementById('tbody-users').innerHTML = S.users.length
-            ? S.users.map(u => '<tr><td><i class="bi bi-person-circle text-primary me-1"></i><strong>' + u.username + '</strong></td>' +
+        var d = await api('GET', '/api/users');
+        S.users = d && d.users ? d.users : [];
+        var rows = S.users.length ? S.users.map(function(u) {
+            return '<tr><td><i class="bi bi-person-circle text-primary me-1"></i><strong>' + u.username + '</strong></td>' +
                 '<td><code>' + u.uid + '</code></td>' +
                 '<td><span class="badge bg-success">Active</span></td>' +
                 '<td>' +
-                '<button class="btn btn-sm btn-outline-warning me-1" onclick="openChangePassword(\'' + u.username + '\')" title="Change Password"><i class="bi bi-key-fill"></i></button>' +
-                '<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(\'' + u.username + '\')" title="Delete"><i class="bi bi-trash-fill"></i></button>' +
-                '</td></tr>').join('')
-            : '<tr><td colspan="4" class="text-center text-muted py-4">No users found</td></tr>';
-    } catch(e) { showAlert('Failed to load users: ' + e.message, 'danger'); }
+                '<button class="btn btn-sm btn-outline-warning me-1" onclick="openChangePassword(\'' + u.username + '\')"><i class="bi bi-key-fill"></i></button>' +
+                '<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(\'' + u.username + '\')"><i class="bi bi-trash-fill"></i></button>' +
+                '</td></tr>';
+        }).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">No users</td></tr>';
+        document.getElementById('tbody-users').innerHTML = rows;
+    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
 async function createUser() {
-    const username = document.getElementById('in-username').value.trim();
-    const password = document.getElementById('in-password').value;
-    const fullname = document.getElementById('in-fullname').value.trim();
+    var username = document.getElementById('in-username').value.trim();
+    var password = document.getElementById('in-password').value;
+    var fullname = document.getElementById('in-fullname').value.trim();
     if (!username || !password) { showAlert('Username and password required', 'warning'); return; }
     try {
-        await api('POST', '/api/users', { username, password, fullname });
+        await api('POST', '/api/users', { username: username, password: password, fullname: fullname });
         showAlert('User "' + username + '" created');
         bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide();
         document.getElementById('in-username').value = '';
@@ -334,7 +304,7 @@ async function deleteUser(username) {
     if (!confirm('Delete user "' + username + '"?')) return;
     try {
         await api('DELETE', '/api/users/' + username);
-        showAlert('User "' + username + '" deleted');
+        showAlert('Deleted "' + username + '"');
         loadUsers();
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
@@ -347,29 +317,29 @@ function openChangePassword(username) {
 }
 
 async function doChangePassword() {
-    const password = document.getElementById('in-new-password').value;
+    var password = document.getElementById('in-new-password').value;
     if (!password) { showAlert('Enter new password', 'warning'); return; }
     try {
         await api('POST', '/api/users/' + S.pwUsername + '/password?password=' + encodeURIComponent(password));
-        showAlert('Password updated for "' + S.pwUsername + '"');
+        showAlert('Password updated');
         bootstrap.Modal.getInstance(document.getElementById('modalPassword')).hide();
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-// ── Groups ────────────────────────────────────
 async function loadGroups() {
     try {
-        const d = await api('GET', '/api/groups');
-        S.groups = d?.groups || [];
-        document.getElementById('tbody-groups').innerHTML = S.groups.length
-            ? S.groups.map(g => '<tr><td><i class="bi bi-diagram-3 text-info me-1"></i><strong>' + g + '</strong></td>' +
-                '<td><button class="btn btn-sm btn-outline-info" onclick="openGroupMembers(\'' + g + '\')"><i class="bi bi-people"></i> Add Member</button></td></tr>').join('')
-            : '<tr><td colspan="2" class="text-center text-muted py-4">No groups found</td></tr>';
-    } catch(e) { showAlert('Failed to load groups: ' + e.message, 'danger'); }
+        var d = await api('GET', '/api/groups');
+        S.groups = d && d.groups ? d.groups : [];
+        var rows = S.groups.length ? S.groups.map(function(g) {
+            return '<tr><td><i class="bi bi-diagram-3 text-info me-1"></i><strong>' + g + '</strong></td>' +
+                '<td><button class="btn btn-sm btn-outline-info" onclick="openGroupMembers(\'' + g + '\')"><i class="bi bi-people"></i> Add Member</button></td></tr>';
+        }).join('') : '<tr><td colspan="2" class="text-center text-muted py-4">No groups</td></tr>';
+        document.getElementById('tbody-groups').innerHTML = rows;
+    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
 async function createGroup() {
-    const gn = document.getElementById('in-groupname').value.trim();
+    var gn = document.getElementById('in-groupname').value.trim();
     if (!gn) { showAlert('Group name required', 'warning'); return; }
     try {
         await api('POST', '/api/groups', { group_name: gn });
@@ -382,13 +352,13 @@ async function createGroup() {
 
 function openGroupMembers(groupName) {
     S.currentGroup = groupName;
-    document.getElementById('members-title').textContent = 'Add Member → ' + groupName;
+    document.getElementById('members-title').textContent = 'Add Member to ' + groupName;
     document.getElementById('in-member-username').value = '';
     new bootstrap.Modal(document.getElementById('modalMembers')).show();
 }
 
 async function addMember() {
-    const u = document.getElementById('in-member-username').value.trim();
+    var u = document.getElementById('in-member-username').value.trim();
     if (!u) { showAlert('Enter a username', 'warning'); return; }
     try {
         await api('POST', '/api/groups/' + S.currentGroup + '/members/' + u);
@@ -397,42 +367,50 @@ async function addMember() {
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-// ── Shares ────────────────────────────────────
 async function loadShares() {
     try {
-        const d = await api('GET', '/api/shares');
-        S.shares = d?.shares || [];
-        const grid = document.getElementById('shares-grid');
-        grid.innerHTML = S.shares.length
-            ? S.shares.map(s => '<div class="col-md-6 col-xl-4"><div class="card share-card h-100">' +
+        var d = await api('GET', '/api/shares');
+        S.shares = d && d.shares ? d.shares : [];
+        var grid = document.getElementById('shares-grid');
+        if (!S.shares.length) {
+            grid.innerHTML = '<div class="col"><div class="alert alert-info">No shares. Click Add Share.</div></div>';
+            return;
+        }
+        grid.innerHTML = S.shares.map(function(s) {
+            var validBadges = s.valid_users && s.valid_users.length ? s.valid_users.map(function(u) { return '<span class="badge bg-primary me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">All</small>';
+            var writeBadges = s.write_list && s.write_list.length ? s.write_list.map(function(u) { return '<span class="badge bg-success me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">None</small>';
+            var readBadges  = s.read_list && s.read_list.length ? s.read_list.map(function(u) { return '<span class="badge bg-info me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">None</small>';
+            var blockBadges = s.invalid_users && s.invalid_users.length ? s.invalid_users.map(function(u) { return '<span class="badge bg-danger me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">None</small>';
+            return '<div class="col-md-6 col-xl-4"><div class="card share-card h-100">' +
                 '<div class="card-header d-flex justify-content-between align-items-center">' +
                 '<span><i class="bi bi-folder2-open text-warning me-1"></i><strong>' + s.name + '</strong></span>' +
                 '<div>' + (s.abse ? '<span class="badge bg-dark me-1">ABSE</span>' : '') +
                 '<span class="badge ' + (s.guest_ok ? 'bg-warning text-dark' : 'bg-secondary') + ' me-1">' + (s.guest_ok ? 'Guest' : 'Private') + '</span>' +
                 '<span class="badge ' + (s.read_only ? 'bg-info' : 'bg-success') + '">' + (s.read_only ? 'RO' : 'RW') + '</span></div></div>' +
                 '<div class="card-body">' +
-                '<p class="text-muted small mb-2"><i class="bi bi-folder"></i> <code>' + s.path + '</code></p>' +
-                '<p class="text-muted small mb-2">' + (s.comment || '—') + '</p>' +
-                '<div class="mb-2"><small class="fw-bold text-muted">VALID USERS:</small><br>' +
-                (s.valid_users?.length ? s.valid_users.map(u => '<span class="badge bg-primary me-1 mb-1">' + u + '</span>').join('') : '<small class="text-muted">All users</small>') + '</div>' +
-                '<div><small class="fw-bold text-muted">WRITE LIST:</small><br>' +
-                (s.write_list?.length ? s.write_list.map(u => '<span class="badge bg-success me-1 mb-1">' + u + '</span>').join('') : '<small class="text-muted">None</small>') + '</div></div>' +
+                '<p class="small text-muted mb-2"><code>' + s.path + '</code></p>' +
+                '<div class="row g-1 small mb-1"><div class="col-6"><strong class="text-muted">Valid:</strong> ' + validBadges + '</div>' +
+                '<div class="col-6"><strong class="text-muted">Write:</strong> ' + writeBadges + '</div></div>' +
+                '<div class="row g-1 small"><div class="col-6"><strong class="text-muted">Read:</strong> ' + readBadges + '</div>' +
+                '<div class="col-6"><strong class="text-muted">Block:</strong> ' + blockBadges + '</div></div></div>' +
                 '<div class="card-footer d-flex gap-2">' +
                 '<button class="btn btn-sm btn-dark flex-grow-1" onclick="openPermModal(\'' + s.name + '\')"><i class="bi bi-lock"></i> Permissions</button>' +
                 '<button class="btn btn-sm btn-outline-danger" onclick="deleteShare(\'' + s.name + '\')"><i class="bi bi-trash"></i></button>' +
-                '</div></div></div>').join('')
-            : '<div class="col"><div class="alert alert-info">No shares. Click Add Share.</div></div>';
-    } catch(e) { showAlert('Failed to load shares: ' + e.message, 'danger'); }
+                '</div></div></div>';
+        }).join('');
+    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
 async function createShare() {
-    const payload = {
+    var payload = {
         name: document.getElementById('in-sharename').value.trim(),
         path: document.getElementById('in-sharepath').value.trim(),
         comment: document.getElementById('in-sharecomment').value.trim(),
         browseable: document.getElementById('in-browseable').checked,
         guest_ok: document.getElementById('in-guestok').checked,
         abse: document.getElementById('in-abse').checked,
+        create_mask: document.getElementById('in-create-mask').value,
+        directory_mask: document.getElementById('in-dir-mask').value
     };
     if (!payload.name || !payload.path) { showAlert('Name and Path required', 'warning'); return; }
     try {
@@ -444,7 +422,7 @@ async function createShare() {
 }
 
 async function deleteShare(name) {
-    if (!confirm('Remove share "' + name + '"?\nFiles will NOT be deleted.')) return;
+    if (!confirm('Remove share "' + name + '"? Files will NOT be deleted.')) return;
     try {
         await api('DELETE', '/api/shares/' + name);
         showAlert('Share "' + name + '" removed');
@@ -452,147 +430,195 @@ async function deleteShare(name) {
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-// ── Permissions Tab ───────────────────────────
 async function initPermissions() {
     try {
-        const d = await api('GET', '/api/shares');
-        S.shares = d?.shares || [];
-        const sel = document.getElementById('perm-share-select');
+        var d = await api('GET', '/api/shares');
+        S.shares = d && d.shares ? d.shares : [];
+        var sel = document.getElementById('perm-share-select');
         sel.innerHTML = '<option value="">-- Select a share --</option>';
-        S.shares.forEach(s => { sel.innerHTML += '<option value="' + s.name + '">' + s.name + ' (' + s.path + ')</option>'; });
+        S.shares.forEach(function(s) {
+            sel.innerHTML += '<option value="' + s.name + '">' + s.name + ' (' + s.path + ')</option>';
+        });
         document.getElementById('perm-container').innerHTML = '';
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
+function makePermSection(title, color, users, shareName, permType, inputId) {
+    var badgeClass = 'bg-' + color;
+    var textClass = (color === 'warning') ? 'text-dark' : '';
+    var badges = users && users.length ? users.map(function(u) {
+        return '<span class="badge ' + badgeClass + ' ' + textClass + ' me-1 mb-1">' + u +
+            ' <span style="cursor:pointer" onclick="quickRevoke(\'' + shareName + '\',\'' + permType + '\',\'' + u + '\')">&times;</span></span>';
+    }).join('') : '<small class="text-muted">None</small>';
+
+    return '<div class="col-md-4"><div class="card h-100">' +
+        '<div class="card-header bg-' + color + ' ' + textClass + ' text-' + (color === 'warning' ? 'dark' : 'white') + '">' + title + ' <span class="badge bg-white text-dark float-end">' + (users ? users.length : 0) + '</span></div>' +
+        '<div class="card-body"><div class="mb-2">' + badges + '</div>' +
+        '<div class="input-group input-group-sm">' +
+        '<input type="text" class="form-control" id="' + inputId + '" placeholder="user or @group">' +
+        '<button class="btn btn-' + color + ' ' + textClass + '" onclick="quickGrant(\'' + shareName + '\',\'' + permType + '\',\'' + inputId + '\')">+</button>' +
+        '</div></div></div></div>';
+}
+
 async function loadPermissions() {
-    const name = document.getElementById('perm-share-select').value;
-    const container = document.getElementById('perm-container');
+    var name = document.getElementById('perm-share-select').value;
+    var container = document.getElementById('perm-container');
     if (!name) { container.innerHTML = ''; return; }
     container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
     try {
-        const s = await api('GET', '/api/shares/' + name);
-        container.innerHTML =
-            '<div class="row g-3">' +
-            '<div class="col-md-6"><div class="card h-100"><div class="card-header bg-primary text-white"><i class="bi bi-person-check-fill"></i> Valid Users <span class="badge bg-light text-dark float-end">' + (s.valid_users?.length || 0) + '</span></div><div class="card-body">' +
-            '<div class="mb-3">' + (s.valid_users?.length ? s.valid_users.map(u => '<span class="badge bg-primary me-1 mb-1">' + u + ' <i class="bi bi-x revoke-x" onclick="quickRevoke(\'' + name + '\',\'valid_users\',\'' + u + '\',' + JSON.stringify(s.valid_users) + ')"></i></span>').join('') : '<p class="text-muted small">No restrictions</p>') + '</div>' +
-            '<div class="input-group input-group-sm"><input type="text" class="form-control" id="qi-valid" placeholder="username or @group"><button class="btn btn-primary" onclick="quickGrant(\'' + name + '\',\'valid_users\',' + JSON.stringify(s.valid_users) + ')"><i class="bi bi-plus-lg"></i> Grant</button></div>' +
-            '</div></div></div>' +
-            '<div class="col-md-6"><div class="card h-100"><div class="card-header bg-success text-white"><i class="bi bi-pencil-square"></i> Write List <span class="badge bg-light text-dark float-end">' + (s.write_list?.length || 0) + '</span></div><div class="card-body">' +
-            '<div class="mb-3">' + (s.write_list?.length ? s.write_list.map(u => '<span class="badge bg-success me-1 mb-1">' + u + ' <i class="bi bi-x revoke-x" onclick="quickRevoke(\'' + name + '\',\'write_list\',\'' + u + '\',' + JSON.stringify(s.write_list) + ')"></i></span>').join('') : '<p class="text-muted small">No write access</p>') + '</div>' +
-            '<div class="input-group input-group-sm"><input type="text" class="form-control" id="qi-write" placeholder="username or @group"><button class="btn btn-success" onclick="quickGrant(\'' + name + '\',\'write_list\',' + JSON.stringify(s.write_list) + ')"><i class="bi bi-plus-lg"></i> Grant Write</button></div>' +
-            '</div></div></div>' +
-            '<div class="col-12"><div class="card"><div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> Share Settings</div><div class="card-body"><div class="row g-3">' +
-            '<div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="sw-readonly" ' + (s.read_only ? 'checked' : '') + ' onchange="toggleSetting(\'' + name + '\',\'read_only\',this.checked)"><label class="form-check-label"><i class="bi bi-lock text-info"></i> Read-Only</label></div></div>' +
-            '<div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="sw-guest" ' + (s.guest_ok ? 'checked' : '') + ' onchange="toggleSetting(\'' + name + '\',\'guest_ok\',this.checked)"><label class="form-check-label"><i class="bi bi-person-dash text-warning"></i> Guest OK</label></div></div>' +
-            '<div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="sw-browse" ' + (s.browseable ? 'checked' : '') + ' onchange="toggleSetting(\'' + name + '\',\'browseable\',this.checked)"><label class="form-check-label"><i class="bi bi-eye text-success"></i> Browseable</label></div></div>' +
-            '<div class="col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="sw-abse" ' + (s.abse ? 'checked' : '') + ' onchange="toggleShareAbse(\'' + name + '\',this.checked)"><label class="form-check-label"><i class="bi bi-eye-slash text-dark"></i> ABSE</label></div></div>' +
-            '</div></div></div></div></div>';
-    } catch(e) { showAlert('Failed to load permissions: ' + e.message, 'danger'); }
+        var s = await api('GET', '/api/shares/' + name);
+        var html = '<div class="row g-3 mb-3">' +
+            makePermSection('Valid Users', 'primary', s.valid_users, name, 'valid_users', 'qi-valid') +
+            makePermSection('Write List', 'success', s.write_list, name, 'write_list', 'qi-write') +
+            makePermSection('Read List', 'info', s.read_list, name, 'read_list', 'qi-read') +
+            makePermSection('Admin Users', 'dark', s.admin_users, name, 'admin_users', 'qi-admin') +
+            makePermSection('Blocked Users', 'danger', s.invalid_users, name, 'invalid_users', 'qi-block') +
+            '</div>';
+
+        html += '<div class="card"><div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> Settings — ' + name + '</div><div class="card-body"><div class="row g-3">';
+        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.read_only ? 'checked' : '') + ' onchange="patchShare(\'' + name + '\',{read_only:this.checked})"><label class="form-check-label small">Read-Only</label></div></div>';
+        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.guest_ok ? 'checked' : '') + ' onchange="patchShare(\'' + name + '\',{guest_ok:this.checked})"><label class="form-check-label small">Guest OK</label></div></div>';
+        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.browseable ? 'checked' : '') + ' onchange="patchShare(\'' + name + '\',{browseable:this.checked})"><label class="form-check-label small">Browseable</label></div></div>';
+        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.abse ? 'checked' : '') + ' onchange="toggleShareAbse(\'' + name + '\',this.checked)"><label class="form-check-label small">ABSE</label></div></div>';
+        html += '<div class="col-auto"><label class="form-label small mb-1">Create Mask</label><select class="form-select form-select-sm" onchange="patchShare(\'' + name + '\',{create_mask:this.value})">';
+        ['0755','0644','0660','0777'].forEach(function(m) { html += '<option value="' + m + '" ' + (s.create_mask === m ? 'selected' : '') + '>' + m + '</option>'; });
+        html += '</select></div>';
+        html += '<div class="col-auto"><label class="form-label small mb-1">Dir Mask</label><select class="form-select form-select-sm" onchange="patchShare(\'' + name + '\',{directory_mask:this.value})">';
+        ['0755','0750','0770','0777'].forEach(function(m) { html += '<option value="' + m + '" ' + (s.directory_mask === m ? 'selected' : '') + '>' + m + '</option>'; });
+        html += '</select></div>';
+        html += '</div></div></div>';
+
+        container.innerHTML = html;
+    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-async function quickGrant(shareName, permType, currentList) {
-    const inputId = permType === 'valid_users' ? 'qi-valid' : 'qi-write';
-    const newUser = document.getElementById(inputId)?.value.trim();
+async function quickGrant(shareName, permType, inputId) {
+    var newUser = document.getElementById(inputId) ? document.getElementById(inputId).value.trim() : '';
     if (!newUser) { showAlert('Enter a username or @group', 'warning'); return; }
-    if (currentList.includes(newUser)) { showAlert('"' + newUser + '" already in list', 'warning'); return; }
     try {
-        await api('POST', '/api/shares/' + shareName + '/permissions', { users: [...currentList, newUser], permission_type: permType });
+        var s = await api('GET', '/api/shares/' + shareName);
+        var lists = { valid_users: s.valid_users, write_list: s.write_list, read_list: s.read_list, admin_users: s.admin_users, invalid_users: s.invalid_users };
+        var current = lists[permType] || [];
+        if (current.indexOf(newUser) >= 0) { showAlert('"' + newUser + '" already in list', 'warning'); return; }
+        current.push(newUser);
+        await api('POST', '/api/shares/' + shareName + '/permissions', { users: current, permission_type: permType });
         showAlert('Granted "' + newUser + '"');
         loadPermissions();
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-async function quickRevoke(shareName, permType, username, currentList) {
+async function quickRevoke(shareName, permType, username) {
     if (!confirm('Revoke "' + username + '"?')) return;
     try {
-        await api('POST', '/api/shares/' + shareName + '/permissions', { users: currentList.filter(u => u !== username), permission_type: permType });
+        var s = await api('GET', '/api/shares/' + shareName);
+        var lists = { valid_users: s.valid_users, write_list: s.write_list, read_list: s.read_list, admin_users: s.admin_users, invalid_users: s.invalid_users };
+        var current = (lists[permType] || []).filter(function(u) { return u !== username; });
+        await api('POST', '/api/shares/' + shareName + '/permissions', { users: current, permission_type: permType });
         showAlert('Revoked "' + username + '"');
         loadPermissions();
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-async function toggleSetting(shareName, key, value) {
+async function patchShare(shareName, updates) {
     try {
-        await api('PATCH', '/api/shares/' + shareName, { [key]: value });
-        showAlert('Updated: ' + key + ' = ' + value, 'info');
+        await api('PATCH', '/api/shares/' + shareName, updates);
+        showAlert('Updated', 'info');
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-// ── Permission Modal (from Share card) ────────────
 async function openPermModal(shareName) {
     S.currentShare = shareName;
     document.getElementById('perm-modal-title').innerHTML = '<i class="bi bi-lock-fill"></i> Permissions — ' + shareName;
     document.getElementById('perm-modal-body').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
     new bootstrap.Modal(document.getElementById('modalPerm')).show();
     try {
-        const [share, usersData, groupsData] = await Promise.all([
+        var results = await Promise.all([
             api('GET', '/api/shares/' + shareName),
             api('GET', '/api/users'),
-            api('GET', '/api/groups'),
+            api('GET', '/api/groups')
         ]);
-        const principals = [
-            ...(usersData?.users || []).map(u => ({ label: u.username, value: u.username, type: 'user' })),
-            ...(groupsData?.groups || []).map(g => ({ label: g, value: '@' + g, type: 'group' })),
-        ];
+        var share = results[0];
+        var users = results[1] && results[1].users ? results[1].users : [];
+        var groups = results[2] && results[2].groups ? results[2].groups : [];
+
+        var principals = users.map(function(u) { return { label: u.username, value: u.username, type: 'user' }; })
+            .concat(groups.map(function(g) { return { label: g, value: '@' + g, type: 'group' }; }));
+
+        var rows = principals.map(function(p) {
+            var sid = p.value.replace('@', 'grp_');
+            var isValid = share.valid_users && share.valid_users.indexOf(p.value) >= 0;
+            var isWrite = share.write_list && share.write_list.indexOf(p.value) >= 0;
+            var isRead  = share.read_list && share.read_list.indexOf(p.value) >= 0;
+            var isAdmin = share.admin_users && share.admin_users.indexOf(p.value) >= 0;
+            var isBlock = share.invalid_users && share.invalid_users.indexOf(p.value) >= 0;
+            return '<div class="d-flex align-items-center px-3 py-2 border-bottom">' +
+                '<span class="me-auto"><i class="bi bi-' + (p.type === 'group' ? 'diagram-3 text-info' : 'person-circle text-primary') + ' me-1"></i><strong>' + p.label + '</strong>' +
+                (p.type === 'group' ? '<span class="badge bg-info text-dark ms-1 small">group</span>' : '') + '</span>' +
+                '<div class="d-flex gap-3 small">' +
+                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="v_' + sid + '" value="' + p.value + '" data-ptype="valid" ' + (isValid ? 'checked' : '') + '><label class="form-check-label text-primary" for="v_' + sid + '">Valid</label></div>' +
+                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="w_' + sid + '" value="' + p.value + '" data-ptype="write" ' + (isWrite ? 'checked' : '') + '><label class="form-check-label text-success" for="w_' + sid + '">Write</label></div>' +
+                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="r_' + sid + '" value="' + p.value + '" data-ptype="read" ' + (isRead ? 'checked' : '') + '><label class="form-check-label text-info" for="r_' + sid + '">Read</label></div>' +
+                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="a_' + sid + '" value="' + p.value + '" data-ptype="admin" ' + (isAdmin ? 'checked' : '') + '><label class="form-check-label" for="a_' + sid + '">Admin</label></div>' +
+                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="b_' + sid + '" value="' + p.value + '" data-ptype="block" ' + (isBlock ? 'checked' : '') + '><label class="form-check-label text-danger" for="b_' + sid + '">Block</label></div>' +
+                '</div></div>';
+        }).join('');
+
         document.getElementById('perm-modal-body').innerHTML =
-            '<p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> <strong>Valid</strong> = allow access | <strong>Write</strong> = read + write</p>' +
-            '<div class="border rounded" style="max-height:400px;overflow-y:auto">' +
-            (principals.length ? principals.map(p => {
-                const isValid = share?.valid_users?.includes(p.value);
-                const isWrite = share?.write_list?.includes(p.value);
-                const safeId = p.value.replace('@', 'grp_');
-                return '<div class="d-flex align-items-center px-3 py-2 border-bottom">' +
-                    '<span class="me-auto"><i class="bi bi-' + (p.type === 'group' ? 'diagram-3 text-info' : 'person-circle text-primary') + ' me-2"></i><strong>' + p.label + '</strong>' +
-                    (p.type === 'group' ? '<span class="badge bg-info text-dark ms-2">group</span>' : '') + '</span>' +
-                    '<div class="d-flex gap-4 ms-3">' +
-                    '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="v_' + safeId + '" value="' + p.value + '" data-ptype="valid" ' + (isValid ? 'checked' : '') + '><label class="form-check-label small" for="v_' + safeId + '">Valid</label></div>' +
-                    '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="w_' + safeId + '" value="' + p.value + '" data-ptype="write" ' + (isWrite ? 'checked' : '') + '><label class="form-check-label small" for="w_' + safeId + '">Write</label></div>' +
-                    '</div></div>';
-            }).join('') : '<p class="text-center text-muted py-4">No users or groups found</p>') +
-            '</div>';
+            '<p class="text-muted small mb-2"><strong class="text-primary">Valid</strong>=เข้าได้ <strong class="text-success">Write</strong>=เขียน <strong class="text-info">Read</strong>=อ่าน <strong>Admin</strong>=Full <strong class="text-danger">Block</strong>=บล็อค</p>' +
+            '<div class="border rounded" style="max-height:400px;overflow-y:auto">' + (rows || '<p class="text-center py-4 text-muted">No users</p>') + '</div>';
     } catch(e) {
-        document.getElementById('perm-modal-body').innerHTML = '<div class="alert alert-danger">Failed: ' + e.message + '</div>';
+        document.getElementById('perm-modal-body').innerHTML = '<div class="alert alert-danger">Error: ' + e.message + '</div>';
     }
 }
 
 async function saveModalPermissions() {
-    const shareName = S.currentShare;
-    const validUsers = [...document.querySelectorAll('[data-ptype="valid"]:checked')].map(el => el.value);
-    const writeList = [...document.querySelectorAll('[data-ptype="write"]:checked')].map(el => el.value);
-    try {
-        await api('POST', '/api/shares/' + shareName + '/permissions', { users: validUsers, permission_type: 'valid_users' });
-        await api('POST', '/api/shares/' + shareName + '/permissions', { users: writeList, permission_type: 'write_list' });
+    var shareName = S.currentShare;
+    var validUsers   = Array.from(document.querySelectorAll('[data-ptype="valid"]:checked')).map(function(el) { return el.value; });
+    var writeList    = Array.from(document.querySelectorAll('[data-ptype="write"]:checked')).map(function(el) { return el.value; });
+    var readList     = Array.from(document.querySelectorAll('[data-ptype="read"]:checked')).map(function(el) { return el.value; });
+    var adminUsers   = Array.from(document.querySelectorAll('[data-ptype="admin"]:checked')).map(function(el) { return el.value; });
+    var invalidUsers = Array.from(document.querySelectorAll('[data-ptype="block"]:checked')).map(function(el) { return el.value; });
+try {
+        await Promise.all([
+            api('POST', '/api/shares/' + shareName + '/permissions', { users: validUsers, permission_type: 'valid_users' }),
+            api('POST', '/api/shares/' + shareName + '/permissions', { users: writeList, permission_type: 'write_list' }),
+            api('POST', '/api/shares/' + shareName + '/permissions', { users: readList, permission_type: 'read_list' }),
+            api('POST', '/api/shares/' + shareName + '/permissions', { users: adminUsers, permission_type: 'admin_users' }),
+            api('POST', '/api/shares/' + shareName + '/permissions', { users: invalidUsers, permission_type: 'invalid_users' })
+        ]);
         showAlert('Permissions saved for "' + shareName + '"');
         bootstrap.Modal.getInstance(document.getElementById('modalPerm')).hide();
         loadShares();
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
-// ── Settings (ABSE) ───────────────────────────
 async function loadSettings() {
     try {
-        const [g, shares] = await Promise.all([api('GET', '/api/shares/global'), api('GET', '/api/shares')]);
+        var results = await Promise.all([api('GET', '/api/shares/global'), api('GET', '/api/shares')]);
+        var g = results[0];
+        var shares = results[1];
         document.getElementById('sw-global-abse').checked = g.abse;
-        const statusBox = document.getElementById('abse-status');
+        var statusBox = document.getElementById('abse-status');
         statusBox.className = 'alert small mb-0 alert-' + (g.abse ? 'success' : 'secondary');
         statusBox.innerHTML = g.abse
             ? '<i class="bi bi-eye-slash-fill"></i> <strong>ABSE เปิดอยู่</strong> — Users มองไม่เห็น Share ที่ไม่มีสิทธิ์'
             : '<i class="bi bi-eye-fill"></i> <strong>ABSE ปิดอยู่</strong> — Users เห็น Share ทั้งหมด';
-        const tbody = document.getElementById('tbody-share-abse');
-        tbody.innerHTML = shares?.shares?.length
-            ? shares.shares.map(s => '<tr><td><i class="bi bi-folder2-open text-warning"></i> ' + s.name + '</td>' +
+        var tbody = document.getElementById('tbody-share-abse');
+        var shareList = shares && shares.shares ? shares.shares : [];
+        tbody.innerHTML = shareList.length ? shareList.map(function(s) {
+            return '<tr><td><i class="bi bi-folder2-open text-warning"></i> ' + s.name + '</td>' +
                 '<td><code class="small">' + s.path + '</code></td>' +
                 '<td class="text-center"><div class="form-check form-switch d-flex justify-content-center mb-0">' +
                 '<input class="form-check-input" type="checkbox" ' + (s.abse ? 'checked' : '') +
-                ' onchange="toggleShareAbse(\'' + s.name + '\', this.checked)" style="width:2.5rem;height:1.3rem"></div></td></tr>').join('')
-            : '<tr><td colspan="3" class="text-center text-muted">No shares</td></tr>';
+                ' onchange="toggleShareAbse(\'' + s.name + '\', this.checked)" style="width:2.5rem;height:1.3rem"></div></td></tr>';
+        }).join('') : '<tr><td colspan="3" class="text-center text-muted">No shares</td></tr>';
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
 
 async function toggleGlobalAbse(enabled) {
     try {
-        const d = await api('PATCH', '/api/shares/global', { abse: enabled });
-        showAlert(d?.message || 'Updated', enabled ? 'success' : 'warning');
+        var d = await api('PATCH', '/api/shares/global', { abse: enabled });
+        showAlert(d && d.message ? d.message : 'Updated', enabled ? 'success' : 'warning');
         loadSettings();
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
 }
@@ -604,42 +630,38 @@ async function toggleShareAbse(shareName, enabled) {
     } catch(e) { showAlert('Error: ' + e.message, 'danger'); loadSettings(); }
 }
 
-// ── Audit ────────────────────────────────────
 async function loadAudit() {
     try {
-        const d = await api('GET', '/api/audit/logs?limit=100');
-        document.getElementById('tbody-audit').innerHTML = d?.logs?.length
-            ? d.logs.map(l => '<tr>' +
-                '<td class="small">' + new Date(l.timestamp).toLocaleString('th-TH') + '</td>' +
+        var d = await api('GET', '/api/audit/logs?limit=100');
+        var logs = d && d.logs ? d.logs : [];
+        document.getElementById('tbody-audit').innerHTML = logs.length ? logs.map(function(l) {
+            return '<tr><td class="small">' + new Date(l.timestamp).toLocaleString('th-TH') + '</td>' +
                 '<td><span class="badge bg-secondary">' + l.action + '</span></td>' +
                 '<td>' + l.actor + '</td>' +
                 '<td class="small">' + l.resource_type + '/' + l.resource_name + '</td>' +
-                '<td><span class="badge bg-' + (l.status === 'success' ? 'success' : 'danger') + '">' + l.status + '</span></td></tr>').join('')
-            : '<tr><td colspan="5" class="text-center text-muted py-4">No logs</td></tr>';
+                '<td><span class="badge bg-' + (l.status === 'success' ? 'success' : 'danger') + '">' + l.status + '</span></td></tr>';
+        }).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">No logs</td></tr>';
     } catch(e) { console.error(e); }
 }
 
-// ── Logout & Init ─────────────────────────────
 async function logout() {
     if (!confirm('Logout?')) return;
-    try {
-        await fetch('/auth/logout', { method: 'POST' });
-        window.location.href = '/login';
-    } catch(e) { console.error(e); }
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
 }
 
 async function loadCurrentUser() {
     try {
-        const d = await api('GET', '/auth/me');
-        document.getElementById('current-user').textContent = d?.username || 'User';
+        var d = await api('GET', '/auth/me');
+        document.getElementById('current-user').textContent = d && d.username ? d.username : 'User';
     } catch(e) { console.error(e); }
 }
 
-setInterval(() => {
+setInterval(function() {
     document.getElementById('clock').textContent = new Date().toLocaleString('th-TH');
 }, 1000);
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('clock').textContent = new Date().toLocaleString('th-TH');
     loadCurrentUser();
     loadDashboard();

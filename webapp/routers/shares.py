@@ -18,6 +18,8 @@ class ShareCreate(BaseModel):
     browseable: bool = True
     guest_ok: bool = False
     abse: bool = False
+    create_mask: str = "0755"
+    directory_mask: str = "0755"
 
 class ShareUpdate(BaseModel):
     comment: Optional[str] = None
@@ -25,6 +27,8 @@ class ShareUpdate(BaseModel):
     guest_ok: Optional[bool] = None
     read_only: Optional[bool] = None
     abse: Optional[bool] = None
+    create_mask: Optional[str] = None
+    directory_mask: Optional[str] = None
 
 class PermissionUpdate(BaseModel):
     users: List[str] = []
@@ -42,12 +46,10 @@ def get_executor():
 def get_actor(request: Request) -> str:
     return getattr(request.state, 'username', 'unknown')
 
-# ─── ⚠️ FIXED: Static routes MUST come BEFORE /{share_name} ──
+# ⚠️ Static routes BEFORE /{share_name}
 
-# ─── Global Settings ──────────────────────
 @router.get("/global")
 async def get_global_settings():
-    """ดู Global SMB settings"""
     try:
         return get_config().get_global()
     except Exception as e:
@@ -55,25 +57,19 @@ async def get_global_settings():
 
 @router.patch("/global")
 async def update_global_settings(body: GlobalSettings, request: Request):
-    """อัพเดท Global ABSE"""
     try:
         cfg = get_config()
         cfg.set_global_abse(body.abse)
         get_executor().reload_samba()
-
         AuditService.log(
-            action="UPDATE_GLOBAL",
-            actor=get_actor(request),
-            resource_type="SHARE",
-            resource_name="global",
-            status="success",
-            details={"abse": body.abse}
+            action="UPDATE_GLOBAL", actor=get_actor(request),
+            resource_type="SHARE", resource_name="global",
+            status="success", details={"abse": body.abse}
         )
         return {"message": f"Global ABSE set to: {body.abse}"}
     except Exception as e:
         raise HTTPException(500, detail=str(e))
 
-# ─── List All Shares ──────────────────────
 @router.get("")
 async def list_shares():
     try:
@@ -81,28 +77,26 @@ async def list_shares():
     except Exception as e:
         raise HTTPException(500, detail=str(e))
 
-# ─── Create Share ─────────────────────────
 @router.post("")
 async def create_share(share: ShareCreate, request: Request):
     try:
         ex = get_executor()
         ex.execute(f"mkdir -p {share.path} && chmod 777 {share.path}")
-
         cfg = get_config()
         if not cfg.create_share(share.name, share.path, share.comment):
             raise HTTPException(400, "Share already exists")
-
         cfg.update_share(share.name, {
             "browseable": share.browseable,
-            "guest_ok":   share.guest_ok,
-            "abse":       share.abse,
+            "guest_ok": share.guest_ok,
+            "abse": share.abse,
+            "create mask": share.create_mask,
+            "directory mask": share.directory_mask,
         })
         ex.reload_samba()
-
         AuditService.log(
             action="CREATE", actor=get_actor(request),
             resource_type="SHARE", resource_name=share.name,
-            status="success", details={"path": share.path, "abse": share.abse}
+            status="success", details={"path": share.path}
         )
         return {"message": f"Share '{share.name}' created"}
     except HTTPException:
@@ -110,18 +104,14 @@ async def create_share(share: ShareCreate, request: Request):
     except Exception as e:
         raise HTTPException(500, detail=str(e))
 
-# ─── ABSE per Share ── ⚠️ BEFORE /{share_name} ──
 @router.patch("/{share_name}/abse")
 async def toggle_share_abse(share_name: str, enabled: bool, request: Request):
-    """เปิด/ปิด ABSE สำหรับ Share นี้"""
     try:
         cfg = get_config()
         if not cfg.get_share(share_name):
             raise HTTPException(404, f"Share '{share_name}' not found")
-
         cfg.set_share_abse(share_name, enabled)
         get_executor().reload_samba()
-
         AuditService.log(
             action="UPDATE", actor=get_actor(request),
             resource_type="SHARE", resource_name=share_name,
@@ -133,14 +123,12 @@ async def toggle_share_abse(share_name: str, enabled: bool, request: Request):
     except Exception as e:
         raise HTTPException(500, detail=str(e))
 
-# ─── Permissions ── ⚠️ BEFORE /{share_name} ──
 @router.post("/{share_name}/permissions")
 async def update_permissions(share_name: str, perm: PermissionUpdate, request: Request):
     try:
         cfg = get_config()
         if not cfg.get_share(share_name):
             raise HTTPException(404, "Share not found")
-
         perm_map = {
             'valid_users':   cfg.set_valid_users,
             'write_list':    cfg.set_write_list,
@@ -148,13 +136,10 @@ async def update_permissions(share_name: str, perm: PermissionUpdate, request: R
             'admin_users':   cfg.set_admin_users,
             'invalid_users': cfg.set_invalid_users,
         }
-
         if perm.permission_type not in perm_map:
             raise HTTPException(400, f"Invalid permission_type: {perm.permission_type}")
-
         perm_map[perm.permission_type](share_name, perm.users)
         get_executor().reload_samba()
-
         AuditService.log(
             action="PERMISSION_CHANGE", actor=get_actor(request),
             resource_type="SHARE", resource_name=share_name,
@@ -166,7 +151,6 @@ async def update_permissions(share_name: str, perm: PermissionUpdate, request: R
     except Exception as e:
         raise HTTPException(500, detail=str(e))
 
-# ─── Get/Update/Delete Share ── ⚠️ LAST (parameterized) ──
 @router.get("/{share_name}")
 async def get_share(share_name: str):
     try:
@@ -185,11 +169,9 @@ async def update_share(share_name: str, updates: ShareUpdate, request: Request):
         cfg = get_config()
         if not cfg.get_share(share_name):
             raise HTTPException(404, "Share not found")
-
         update_dict = {k: v for k, v in updates.dict().items() if v is not None}
         cfg.update_share(share_name, update_dict)
         get_executor().reload_samba()
-
         AuditService.log(
             action="UPDATE", actor=get_actor(request),
             resource_type="SHARE", resource_name=share_name,
@@ -206,7 +188,6 @@ async def delete_share(share_name: str, request: Request):
     try:
         get_config().delete_share(share_name)
         get_executor().reload_samba()
-
         AuditService.log(
             action="DELETE", actor=get_actor(request),
             resource_type="SHARE", resource_name=share_name,
