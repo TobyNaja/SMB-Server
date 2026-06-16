@@ -2,15 +2,16 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from routers import users, groups, shares, auth, audit
+from routers import users, groups, shares, auth, audit, builtin, ad
 from services.auth_service import AuthService
+from middleware.auth_middleware import auth_middleware
 import uvicorn
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SMB Permission Manager", version="1.0.0")
+app = FastAPI(title="SMB Permission Manager", version="2.0.0")
 
 try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -23,42 +24,9 @@ except:
     logger.warning("Templates dir not found")
     templates = None
 
-# ─── MIDDLEWARE ───────────────────────────────────
 @app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    """Protect all routes except public paths"""
-    
-    public_paths = ["/login", "/health", "/auth/login", "/docs", "/openapi.json"]
-    is_public = any(request.url.path.startswith(p) for p in public_paths) or request.url.path.startswith("/static")
-    
-    if is_public:
-        return await call_next(request)
-    
-    # Get token from cookie or header
-    token = request.cookies.get("access_token")
-    if not token and "authorization" in request.headers:
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-    
-    # No token - redirect or return 401
-    if not token:
-        if request.url.path.startswith("/api"):
-            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Verify token
-    username = AuthService.verify_token(token)
-    if not username:
-        if request.url.path.startswith("/api"):
-            return JSONResponse(status_code=401, content={"detail": "Invalid token"})
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Attach username to request
-    request.state.username = username
-    return await call_next(request)
-
-# ─── ROUTES ───────────────────────────────────────
+async def auth_middleware_wrapper(request: Request, call_next):
+    return await auth_middleware(request, call_next)
 
 @app.get("/health")
 async def health():
@@ -76,12 +44,13 @@ async def dashboard(request: Request):
         return templates.TemplateResponse("index.html", {"request": request})
     return "<h1>Dashboard</h1>"
 
-# Include routers
 app.include_router(auth.router)
 app.include_router(audit.router)
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(shares.router)
+app.include_router(builtin.router)
+app.include_router(ad.router)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

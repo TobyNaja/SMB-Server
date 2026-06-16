@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   samba:
@@ -19,8 +17,9 @@ services:
       - samba-config:/etc/samba
       - samba-data:/var/lib/samba
       - ./data/shared:/mnt/shared
+      - /var/run/samba/winbindd:/var/run/samba/winbindd
     environment:
-      - WORKGROUP=WORKGROUP
+      - WORKGROUP=IT
     healthcheck:
       test: ["CMD-SHELL", "pidof smbd > /dev/null && echo ok || exit 1"]
       interval: 20s

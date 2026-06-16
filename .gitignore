@@ -1,9 +1,25 @@
+# Sensitive
 .env
 *.admin
 audit.json
+
+# Data
+data/shared/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+
+# Samba DB
+*.tdb
+
+# Backup
 *.bak
-data/shared/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
 *.log

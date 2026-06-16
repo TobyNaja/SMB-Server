@@ -19,6 +19,8 @@
             <li class="nav-item mb-1"><a class="nav-link active" href="#" onclick="showTab('dashboard',this)"><i class="bi bi-speedometer2"></i> <span>Dashboard</span></a></li>
             <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('users',this)"><i class="bi bi-people-fill"></i> <span>Users</span></a></li>
             <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('groups',this)"><i class="bi bi-diagram-3-fill"></i> <span>Groups</span></a></li>
+            <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('builtin',this)"><i class="bi bi-shield-fill"></i> <span>Builtin Groups</span></a></li>
+            <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('ad',this)"><i class="bi bi-building-fill"></i> <span>AD / LDAP</span></a></li>
             <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('shares',this)"><i class="bi bi-folder2-open"></i> <span>Shares</span></a></li>
             <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('permissions',this)"><i class="bi bi-lock-fill"></i> <span>Permissions</span></a></li>
             <li class="nav-item mb-1"><a class="nav-link" href="#" onclick="showTab('settings',this)"><i class="bi bi-gear-fill"></i> <span>Settings</span></a></li>
@@ -41,10 +43,10 @@
             <div id="tab-dashboard" class="tab-pane active">
                 <h4 class="mb-4">Dashboard</h4>
                 <div class="row g-3 mb-4">
-                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-primary"><i class="bi bi-people-fill"></i></div><div class="stat-num" id="stat-users">-</div><div class="stat-label">Users</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-primary"><i class="bi bi-people-fill"></i></div><div class="stat-num" id="stat-users">-</div><div class="stat-label">Local Users</div></div></div></div>
                     <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-info"><i class="bi bi-diagram-3-fill"></i></div><div class="stat-num" id="stat-groups">-</div><div class="stat-label">Groups</div></div></div></div>
                     <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-warning"><i class="bi bi-folder2-open"></i></div><div class="stat-num" id="stat-shares">-</div><div class="stat-label">Shares</div></div></div></div>
-                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-success"><i class="bi bi-check-circle-fill"></i></div><div class="stat-num text-success" style="font-size:1.5rem">Online</div><div class="stat-label">Status</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body"><div class="stat-icon text-success"><i class="bi bi-building-fill"></i></div><div class="stat-num text-success small" id="stat-ad">-</div><div class="stat-label">AD Domain</div></div></div></div>
                 </div>
                 <div class="card"><div class="card-header fw-bold"><i class="bi bi-info-circle"></i> Connection Info</div>
                 <div class="card-body">
@@ -81,6 +83,93 @@
                 </div></div>
             </div>
 
+            <!-- BUILTIN GROUPS -->
+            <div id="tab-builtin" class="tab-pane">
+                <h4 class="mb-2">Builtin Groups</h4>
+                <p class="text-muted small mb-4"><i class="bi bi-info-circle"></i> Builtin Groups ระดับ Samba Server เช่น <strong>Administrators</strong> = Full control</p>
+                <div class="row g-3" id="builtin-grid"><div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm"></div></div></div>
+            </div>
+
+            <!-- AD / LDAP TAB -->
+            <div id="tab-ad" class="tab-pane">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="mb-0">Active Directory / LDAP</h4>
+                        <small class="text-muted" id="ad-domain-label">Loading...</small>
+                    </div>
+                    <div id="ad-status-badge"></div>
+                </div>
+
+                <!-- OU Filter -->
+                <div class="card mb-3">
+                    <div class="card-body py-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-bold small">Filter OU:</span>
+                            <button class="btn btn-sm btn-dark active" onclick="filterOU('',this)">All</button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="filterOU('OU=Lecturer',this)"><i class="bi bi-mortarboard"></i> Lecturer</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="filterOU('OU=Staff',this)"><i class="bi bi-person-badge"></i> Staff</button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="filterOU('OU=Student',this)"><i class="bi bi-backpack"></i> Student</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="filterOU('OU=Group',this)"><i class="bi bi-diagram-3"></i> Groups</button>
+                            <div class="ms-auto input-group" style="max-width:250px">
+                                <input type="text" class="form-control form-control-sm" id="ad-search-input" placeholder="Search...">
+                                <button class="btn btn-sm btn-secondary" onclick="searchAD()"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="card mb-3" id="ad-users-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between">
+                        <span><i class="bi bi-people-fill"></i> AD Users</span>
+                        <span class="badge bg-white text-dark" id="ad-users-count">0</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height:400px;overflow-y:auto">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Display Name</th>
+                                        <th>Email</th>
+                                        <th>OU</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-ad-users">
+                                    <tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Groups Table -->
+                <div class="card" id="ad-groups-card" style="display:none">
+                    <div class="card-header bg-info text-white d-flex justify-content-between">
+                        <span><i class="bi bi-diagram-3-fill"></i> AD Groups</span>
+                        <span class="badge bg-white text-dark" id="ad-groups-count">0</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height:400px;overflow-y:auto">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Group Name</th>
+                                        <th>Description</th>
+                                        <th>OU</th>
+                                        <th>SMB Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-ad-groups">
+                                    <tr><td colspan="4" class="text-center py-4">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- SHARES -->
             <div id="tab-shares" class="tab-pane">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -95,9 +184,7 @@
                 <h4 class="mb-3">Share Permissions</h4>
                 <div class="card mb-3" style="max-width:450px"><div class="card-body">
                     <label class="form-label fw-bold">Select Share:</label>
-                    <select class="form-select" id="perm-share-select" onchange="loadPermissions()">
-                        <option value="">-- Select a share --</option>
-                    </select>
+                    <select class="form-select" id="perm-share-select" onchange="loadPermissions()"><option value="">-- Select a share --</option></select>
                 </div></div>
                 <div id="perm-container"></div>
             </div>
@@ -108,12 +195,10 @@
                 <div class="card mb-4" style="max-width:600px">
                     <div class="card-header bg-dark text-white fw-bold"><i class="bi bi-eye-slash-fill"></i> Access Based Share Enumeration (ABSE)</div>
                     <div class="card-body">
-                        <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> เมื่อเปิด ABSE Users จะมองไม่เห็น Share ที่ไม่มีสิทธิ์เข้าถึง</p>
+                        <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> เมื่อเปิด ABSE Users จะมองไม่เห็น Share ที่ไม่มีสิทธิ์</p>
                         <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-3">
                             <div><div class="fw-bold">Global ABSE</div><small class="text-muted">ใช้กับทุก Share</small></div>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="sw-global-abse" role="switch" style="width:3rem;height:1.5rem" onchange="toggleGlobalAbse(this.checked)">
-                            </div>
+                            <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="sw-global-abse" role="switch" style="width:3rem;height:1.5rem" onchange="toggleGlobalAbse(this.checked)"></div>
                         </div>
                         <div id="abse-status" class="alert alert-secondary small mb-0">Loading...</div>
                     </div>
@@ -144,528 +229,724 @@
 </div>
 
 <!-- MODALS -->
-<div class="modal fade" id="modalUser" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="bi bi-person-plus"></i> Add User</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-            <div class="mb-3"><label class="form-label">Username *</label><input type="text" class="form-control" id="in-username"></div>
-            <div class="mb-3"><label class="form-label">Password *</label><input type="password" class="form-control" id="in-password"></div>
-            <div class="mb-3"><label class="form-label">Full Name</label><input type="text" class="form-control" id="in-fullname"></div>
+<div class="modal fade" id="modalUser" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="bi bi-person-plus"></i> Add User</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Username *</label><input type="text" class="form-control" id="in-username"></div>
+        <div class="mb-3"><label class="form-label">Password *</label><input type="password" class="form-control" id="in-password"></div>
+        <div class="mb-3"><label class="form-label">Full Name</label><input type="text" class="form-control" id="in-fullname"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="createUser()">Create</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalPassword" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-warning"><h5 class="modal-title"><i class="bi bi-key-fill"></i> Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <p>For: <strong id="pw-username-label"></strong></p>
+        <div class="mb-3"><label class="form-label">New Password *</label><input type="password" class="form-control" id="in-new-password"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" onclick="doChangePassword()">Update</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalGroup" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-info text-white"><h5 class="modal-title"><i class="bi bi-diagram-3"></i> Add Group</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="mb-3"><label class="form-label">Group Name *</label><input type="text" class="form-control" id="in-groupname"></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-info text-white" onclick="createGroup()">Create</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalMembers" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-info text-white"><h5 class="modal-title" id="members-title">Add Member</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="input-group"><input type="text" class="form-control" id="in-member-username" placeholder="username"><button class="btn btn-info text-white" onclick="addMember()">Add</button></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalBuiltin" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title" id="builtin-modal-title"><i class="bi bi-shield-fill"></i> Builtin Group</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <p class="text-muted small mb-3" id="builtin-modal-desc"></p>
+        <div class="mb-3"><label class="form-label fw-bold">Current Members:</label><div id="builtin-modal-members" class="mb-2"></div></div>
+        <hr>
+        <label class="form-label fw-bold">Add Member:</label>
+        <div class="input-group"><input type="text" class="form-control" id="in-builtin-username" placeholder="Enter username"><button class="btn btn-dark" onclick="addBuiltinMember()"><i class="bi bi-plus-lg"></i> Add</button></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalShare" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-warning"><h5 class="modal-title"><i class="bi bi-folder-plus"></i> Add Share</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Share Name *</label><input type="text" class="form-control" id="in-sharename"></div>
+        <div class="mb-3"><label class="form-label">Path *</label><input type="text" class="form-control" id="in-sharepath" placeholder="/mnt/shared/..."></div>
+        <div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" id="in-sharecomment"></div>
+        <div class="row mb-3">
+            <div class="col-6"><label class="form-label">Create Mask</label>
+                <select class="form-select" id="in-create-mask"><option value="0755">0755</option><option value="0644">0644</option><option value="0660">0660</option><option value="0777">0777</option></select></div>
+            <div class="col-6"><label class="form-label">Directory Mask</label>
+                <select class="form-select" id="in-dir-mask"><option value="0755">0755</option><option value="0750">0750</option><option value="0770">0770</option><option value="0777">0777</option></select></div>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="createUser()">Create</button></div>
-    </div></div>
-</div>
+        <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="in-browseable" checked><label class="form-check-label">Browseable</label></div>
+        <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="in-guestok"><label class="form-check-label">Allow Guest</label></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="in-abse"><label class="form-check-label">Enable ABSE</label></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" onclick="createShare()">Create</button></div>
+</div></div></div>
 
-<div class="modal fade" id="modalPassword" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-warning"><h5 class="modal-title"><i class="bi bi-key-fill"></i> Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-            <p>For: <strong id="pw-username-label"></strong></p>
-            <div class="mb-3"><label class="form-label">New Password *</label><input type="password" class="form-control" id="in-new-password"></div>
+<div class="modal fade" id="modalPerm" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title" id="perm-modal-title"><i class="bi bi-lock-fill"></i> Permissions</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="perm-modal-body"><div class="text-center py-4"><div class="spinner-border text-primary"></div></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success" onclick="saveModalPermissions()">Save</button></div>
+</div></div></div>
+
+<!-- MODAL: Add AD User to Share -->
+<div class="modal fade" id="modalADAddUser" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="bi bi-person-plus-fill"></i> Add AD User to Share</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <p class="mb-2">User: <strong id="ad-add-username"></strong></p>
+        <div class="mb-3">
+            <label class="form-label">Select Share:</label>
+            <select class="form-select" id="ad-add-share-select"></select>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" onclick="doChangePassword()">Update</button></div>
-    </div></div>
-</div>
-
-<div class="modal fade" id="modalGroup" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-info text-white"><h5 class="modal-title"><i class="bi bi-diagram-3"></i> Add Group</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body"><div class="mb-3"><label class="form-label">Group Name *</label><input type="text" class="form-control" id="in-groupname"></div></div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-info text-white" onclick="createGroup()">Create</button></div>
-    </div></div>
-</div>
-
-<div class="modal fade" id="modalMembers" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-info text-white"><h5 class="modal-title" id="members-title">Add Member</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body"><div class="input-group"><input type="text" class="form-control" id="in-member-username" placeholder="username"><button class="btn btn-info text-white" onclick="addMember()">Add</button></div></div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-    </div></div>
-</div>
-
-<div class="modal fade" id="modalShare" tabindex="-1">
-    <div class="modal-dialog"><div class="modal-content">
-        <div class="modal-header bg-warning"><h5 class="modal-title"><i class="bi bi-folder-plus"></i> Add Share</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-            <div class="mb-3"><label class="form-label">Share Name *</label><input type="text" class="form-control" id="in-sharename"></div>
-            <div class="mb-3"><label class="form-label">Path *</label><input type="text" class="form-control" id="in-sharepath" placeholder="/mnt/shared/..."></div>
-            <div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" id="in-sharecomment"></div>
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label">Create Mask</label>
-                    <select class="form-select" id="in-create-mask">
-                        <option value="0755">0755 (default)</option>
-                        <option value="0644">0644 (stricter)</option>
-                        <option value="0660">0660 (group)</option>
-                        <option value="0777">0777 (open)</option>
-                    </select>
-                </div>
-                <div class="col-6">
-                    <label class="form-label">Directory Mask</label>
-                    <select class="form-select" id="in-dir-mask">
-                        <option value="0755">0755 (default)</option>
-                        <option value="0750">0750 (group)</option>
-                        <option value="0770">0770 (group RW)</option>
-                        <option value="0777">0777 (open)</option>
-                    </select>
-                </div>
+        <div class="mb-3">
+            <label class="form-label">Permission Type:</label>
+            <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="ad-perm-type" id="perm-valid" value="valid_users" checked>
+                <label class="btn btn-outline-primary" for="perm-valid">Valid (เข้าได้)</label>
+                <input type="radio" class="btn-check" name="ad-perm-type" id="perm-write" value="write_list">
+                <label class="btn btn-outline-success" for="perm-write">Write (เขียน)</label>
+                <input type="radio" class="btn-check" name="ad-perm-type" id="perm-block" value="invalid_users">
+                <label class="btn btn-outline-danger" for="perm-block">Block (บล็อค)</label>
             </div>
-            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="in-browseable" checked><label class="form-check-label">Browseable</label></div>
-            <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" id="in-guestok"><label class="form-check-label">Allow Guest</label></div>
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="in-abse"><label class="form-check-label">Enable ABSE</label></div>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-warning" onclick="createShare()">Create</button></div>
-    </div></div>
-</div>
-
-<div class="modal fade" id="modalPerm" tabindex="-1">
-    <div class="modal-dialog modal-lg"><div class="modal-content">
-        <div class="modal-header bg-dark text-white"><h5 class="modal-title" id="perm-modal-title"><i class="bi bi-lock-fill"></i> Permissions</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body" id="perm-modal-body"><div class="text-center py-4"><div class="spinner-border text-primary"></div></div></div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success" onclick="saveModalPermissions()">Save</button></div>
-    </div></div>
-</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" onclick="doAddADUserToShare()">Add to Share</button></div>
+</div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-var S = { users: [], groups: [], shares: [], currentShare: null, currentGroup: null, pwUsername: null };
+var S = { users:[], groups:[], shares:[], currentShare:null, currentGroup:null, currentBuiltin:null, pwUsername:null, adUser:null };
+var BUILTIN_DATA = {};
+var AD_CURRENT_OU = '';
 
 function showAlert(msg, type) {
     type = type || 'success';
     var id = 'a' + Date.now();
     document.getElementById('alert-box').insertAdjacentHTML('beforeend',
-        '<div id="' + id + '" class="alert alert-' + type + ' alert-dismissible fade show">' +
-        msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
-    setTimeout(function() { var el = document.getElementById(id); if (el) el.remove(); }, 5000);
+        '<div id="'+id+'" class="alert alert-'+type+' alert-dismissible fade show">'+
+        msg+'<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+    setTimeout(function(){ var el=document.getElementById(id); if(el) el.remove(); }, 5000);
 }
 
-async function api(method, url, body) {
-    var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
+function apiCall(method, url, body, cb, errCb) {
+    var opts = { method: method, headers: {'Content-Type':'application/json'} };
     if (body) opts.body = JSON.stringify(body);
-    var r = await fetch(url, opts);
-    if (r.status === 401) { window.location.href = '/login'; return null; }
-    var d = await r.json();
-    if (!r.ok) throw new Error(d.detail || 'API Error');
-    return d;
+    fetch(url, opts).then(function(r) {
+        if (r.status === 401) { window.location.href='/login'; return; }
+        r.json().then(function(d) {
+            if (!r.ok) { if(errCb) errCb(new Error(d.detail||'API Error')); return; }
+            if(cb) cb(d);
+        });
+    }).catch(function(e){ if(errCb) errCb(e); });
 }
 
 function showTab(name, el) {
-    document.querySelectorAll('.tab-pane').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
-    document.getElementById('tab-' + name).classList.add('active');
-    if (el) el.classList.add('active');
-    var loaders = { dashboard: loadDashboard, users: loadUsers, groups: loadGroups, shares: loadShares, permissions: initPermissions, settings: loadSettings, audit: loadAudit };
-    if (loaders[name]) loaders[name]();
+    document.querySelectorAll('.tab-pane').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.nav-link').forEach(function(l){ l.classList.remove('active'); });
+    document.getElementById('tab-'+name).classList.add('active');
+    if(el) el.classList.add('active');
+    var map = { dashboard:loadDashboard, users:loadUsers, groups:loadGroups, builtin:loadBuiltin, ad:loadAD, shares:loadShares, permissions:initPermissions, settings:loadSettings, audit:loadAudit };
+    if(map[name]) map[name]();
 }
 
-async function loadDashboard() {
-    try {
-        var results = await Promise.all([api('GET','/api/users'), api('GET','/api/groups'), api('GET','/api/shares')]);
-        document.getElementById('stat-users').textContent = results[0] && results[0].users ? results[0].users.length : 0;
-        document.getElementById('stat-groups').textContent = results[1] && results[1].groups ? results[1].groups.length : 0;
-        document.getElementById('stat-shares').textContent = results[2] && results[2].shares ? results[2].shares.length : 0;
-    } catch(e) { console.error(e); }
+function loadDashboard() {
+    apiCall('GET','/api/users',null,function(d){ document.getElementById('stat-users').textContent=d.users?d.users.length:0; });
+    apiCall('GET','/api/groups',null,function(d){ document.getElementById('stat-groups').textContent=d.groups?d.groups.length:0; });
+    apiCall('GET','/api/shares',null,function(d){ document.getElementById('stat-shares').textContent=d.shares?d.shares.length:0; });
+    apiCall('GET','/api/ad/status',null,function(d){
+        var el = document.getElementById('stat-ad');
+        if(d.connected) {
+            el.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Connected';
+            el.className = 'stat-num text-success small';
+        } else {
+            el.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Offline';
+            el.className = 'stat-num text-danger small';
+        }
+    });
 }
 
-async function loadUsers() {
-    try {
-        var d = await api('GET', '/api/users');
-        S.users = d && d.users ? d.users : [];
-        var rows = S.users.length ? S.users.map(function(u) {
-            return '<tr><td><i class="bi bi-person-circle text-primary me-1"></i><strong>' + u.username + '</strong></td>' +
-                '<td><code>' + u.uid + '</code></td>' +
-                '<td><span class="badge bg-success">Active</span></td>' +
-                '<td>' +
-                '<button class="btn btn-sm btn-outline-warning me-1" onclick="openChangePassword(\'' + u.username + '\')"><i class="bi bi-key-fill"></i></button>' +
-                '<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(\'' + u.username + '\')"><i class="bi bi-trash-fill"></i></button>' +
-                '</td></tr>';
-        }).join('') : '<tr><td colspan="4" class="text-center text-muted py-4">No users</td></tr>';
-        document.getElementById('tbody-users').innerHTML = rows;
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function loadUsers() {
+    apiCall('GET','/api/users',null,function(d){
+        S.users = d.users||[];
+        document.getElementById('tbody-users').innerHTML = S.users.length
+            ? S.users.map(function(u){
+                return '<tr><td><i class="bi bi-person-circle text-primary me-1"></i><strong>'+u.username+'</strong></td>'+
+                    '<td><code>'+u.uid+'</code></td>'+
+                    '<td><span class="badge bg-success">Active</span></td>'+
+                    '<td><button class="btn btn-sm btn-outline-warning me-1" onclick="openChangePassword(\''+u.username+'\')"><i class="bi bi-key-fill"></i></button>'+
+                    '<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(\''+u.username+'\')"><i class="bi bi-trash-fill"></i></button></td></tr>';
+            }).join('')
+            : '<tr><td colspan="4" class="text-center text-muted py-4">No users</td></tr>';
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function createUser() {
-    var username = document.getElementById('in-username').value.trim();
-    var password = document.getElementById('in-password').value;
-    var fullname = document.getElementById('in-fullname').value.trim();
-    if (!username || !password) { showAlert('Username and password required', 'warning'); return; }
-    try {
-        await api('POST', '/api/users', { username: username, password: password, fullname: fullname });
-        showAlert('User "' + username + '" created');
+function createUser() {
+    var username=document.getElementById('in-username').value.trim();
+    var password=document.getElementById('in-password').value;
+    var fullname=document.getElementById('in-fullname').value.trim();
+    if(!username||!password){ showAlert('Username and password required','warning'); return; }
+    apiCall('POST','/api/users',{username:username,password:password,fullname:fullname},function(d){
+        showAlert('User "'+username+'" created');
         bootstrap.Modal.getInstance(document.getElementById('modalUser')).hide();
-        document.getElementById('in-username').value = '';
-        document.getElementById('in-password').value = '';
-        document.getElementById('in-fullname').value = '';
+        ['in-username','in-password','in-fullname'].forEach(function(id){ document.getElementById(id).value=''; });
         loadUsers();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function deleteUser(username) {
-    if (!confirm('Delete user "' + username + '"?')) return;
-    try {
-        await api('DELETE', '/api/users/' + username);
-        showAlert('Deleted "' + username + '"');
-        loadUsers();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function deleteUser(username) {
+    if(!confirm('Delete user "'+username+'"?')) return;
+    apiCall('DELETE','/api/users/'+username,null,function(d){ showAlert('Deleted "'+username+'"'); loadUsers(); },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
 function openChangePassword(username) {
-    S.pwUsername = username;
-    document.getElementById('pw-username-label').textContent = username;
-    document.getElementById('in-new-password').value = '';
+    S.pwUsername=username;
+    document.getElementById('pw-username-label').textContent=username;
+    document.getElementById('in-new-password').value='';
     new bootstrap.Modal(document.getElementById('modalPassword')).show();
 }
 
-async function doChangePassword() {
-    var password = document.getElementById('in-new-password').value;
-    if (!password) { showAlert('Enter new password', 'warning'); return; }
-    try {
-        await api('POST', '/api/users/' + S.pwUsername + '/password?password=' + encodeURIComponent(password));
+function doChangePassword() {
+    var password=document.getElementById('in-new-password').value;
+    if(!password){ showAlert('Enter new password','warning'); return; }
+    apiCall('POST','/api/users/'+S.pwUsername+'/password?password='+encodeURIComponent(password),null,function(d){
         showAlert('Password updated');
         bootstrap.Modal.getInstance(document.getElementById('modalPassword')).hide();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function loadGroups() {
-    try {
-        var d = await api('GET', '/api/groups');
-        S.groups = d && d.groups ? d.groups : [];
-        var rows = S.groups.length ? S.groups.map(function(g) {
-            return '<tr><td><i class="bi bi-diagram-3 text-info me-1"></i><strong>' + g + '</strong></td>' +
-                '<td><button class="btn btn-sm btn-outline-info" onclick="openGroupMembers(\'' + g + '\')"><i class="bi bi-people"></i> Add Member</button></td></tr>';
-        }).join('') : '<tr><td colspan="2" class="text-center text-muted py-4">No groups</td></tr>';
-        document.getElementById('tbody-groups').innerHTML = rows;
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function loadGroups() {
+    apiCall('GET','/api/groups',null,function(d){
+        S.groups=d.groups||[];
+        document.getElementById('tbody-groups').innerHTML = S.groups.length
+            ? S.groups.map(function(g){
+                return '<tr><td><i class="bi bi-diagram-3 text-info me-1"></i><strong>'+g+'</strong></td>'+
+                    '<td><button class="btn btn-sm btn-outline-info" onclick="openGroupMembers(\''+g+'\')"><i class="bi bi-people"></i> Add Member</button></td></tr>';
+            }).join('')
+            : '<tr><td colspan="2" class="text-center text-muted py-4">No groups</td></tr>';
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function createGroup() {
-    var gn = document.getElementById('in-groupname').value.trim();
-    if (!gn) { showAlert('Group name required', 'warning'); return; }
-    try {
-        await api('POST', '/api/groups', { group_name: gn });
-        showAlert('Group "' + gn + '" created');
+function createGroup() {
+    var gn=document.getElementById('in-groupname').value.trim();
+    if(!gn){ showAlert('Group name required','warning'); return; }
+    apiCall('POST','/api/groups',{group_name:gn},function(d){
+        showAlert('Group "'+gn+'" created');
         bootstrap.Modal.getInstance(document.getElementById('modalGroup')).hide();
-        document.getElementById('in-groupname').value = '';
+        document.getElementById('in-groupname').value='';
         loadGroups();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
 function openGroupMembers(groupName) {
-    S.currentGroup = groupName;
-    document.getElementById('members-title').textContent = 'Add Member to ' + groupName;
-    document.getElementById('in-member-username').value = '';
+    S.currentGroup=groupName;
+    document.getElementById('members-title').textContent='Add Member to '+groupName;
+    document.getElementById('in-member-username').value='';
     new bootstrap.Modal(document.getElementById('modalMembers')).show();
 }
 
-async function addMember() {
-    var u = document.getElementById('in-member-username').value.trim();
-    if (!u) { showAlert('Enter a username', 'warning'); return; }
-    try {
-        await api('POST', '/api/groups/' + S.currentGroup + '/members/' + u);
-        showAlert('"' + u + '" added to "' + S.currentGroup + '"');
-        document.getElementById('in-member-username').value = '';
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function addMember() {
+    var u=document.getElementById('in-member-username').value.trim();
+    if(!u){ showAlert('Enter a username','warning'); return; }
+    apiCall('POST','/api/groups/'+S.currentGroup+'/members/'+u,null,function(d){
+        showAlert('"'+u+'" added to "'+S.currentGroup+'"');
+        document.getElementById('in-member-username').value='';
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function loadShares() {
-    try {
-        var d = await api('GET', '/api/shares');
-        S.shares = d && d.shares ? d.shares : [];
-        var grid = document.getElementById('shares-grid');
-        if (!S.shares.length) {
-            grid.innerHTML = '<div class="col"><div class="alert alert-info">No shares. Click Add Share.</div></div>';
-            return;
-        }
-        grid.innerHTML = S.shares.map(function(s) {
-            var validBadges = s.valid_users && s.valid_users.length ? s.valid_users.map(function(u) { return '<span class="badge bg-primary me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">All</small>';
-            var writeBadges = s.write_list && s.write_list.length ? s.write_list.map(function(u) { return '<span class="badge bg-success me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">None</small>';
-            var readBadges  = s.read_list && s.read_list.length ? s.read_list.map(function(u) { return '<span class="badge bg-info me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">None</small>';
-            var blockBadges = s.invalid_users && s.invalid_users.length ? s.invalid_users.map(function(u) { return '<span class="badge bg-danger me-1">' + u + '</span>'; }).join('') : '<small class="text-muted">None</small>';
-            return '<div class="col-md-6 col-xl-4"><div class="card share-card h-100">' +
-                '<div class="card-header d-flex justify-content-between align-items-center">' +
-                '<span><i class="bi bi-folder2-open text-warning me-1"></i><strong>' + s.name + '</strong></span>' +
-                '<div>' + (s.abse ? '<span class="badge bg-dark me-1">ABSE</span>' : '') +
-                '<span class="badge ' + (s.guest_ok ? 'bg-warning text-dark' : 'bg-secondary') + ' me-1">' + (s.guest_ok ? 'Guest' : 'Private') + '</span>' +
-                '<span class="badge ' + (s.read_only ? 'bg-info' : 'bg-success') + '">' + (s.read_only ? 'RO' : 'RW') + '</span></div></div>' +
-                '<div class="card-body">' +
-                '<p class="small text-muted mb-2"><code>' + s.path + '</code></p>' +
-                '<div class="row g-1 small mb-1"><div class="col-6"><strong class="text-muted">Valid:</strong> ' + validBadges + '</div>' +
-                '<div class="col-6"><strong class="text-muted">Write:</strong> ' + writeBadges + '</div></div>' +
-                '<div class="row g-1 small"><div class="col-6"><strong class="text-muted">Read:</strong> ' + readBadges + '</div>' +
-                '<div class="col-6"><strong class="text-muted">Block:</strong> ' + blockBadges + '</div></div></div>' +
-                '<div class="card-footer d-flex gap-2">' +
-                '<button class="btn btn-sm btn-dark flex-grow-1" onclick="openPermModal(\'' + s.name + '\')"><i class="bi bi-lock"></i> Permissions</button>' +
-                '<button class="btn btn-sm btn-outline-danger" onclick="deleteShare(\'' + s.name + '\')"><i class="bi bi-trash"></i></button>' +
-                '</div></div></div>';
+// ── Builtin Groups ────────────────────────────
+function loadBuiltin() {
+    document.getElementById('builtin-grid').innerHTML='<div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+    apiCall('GET','/api/builtin',null,function(d){
+        var grid=document.getElementById('builtin-grid');
+        if(!d||!d.groups||!d.groups.length){ grid.innerHTML='<div class="col"><div class="alert alert-warning">No builtin groups</div></div>'; return; }
+        BUILTIN_DATA={};
+        d.groups.forEach(function(g){ BUILTIN_DATA[g.name]=g; });
+        grid.innerHTML=d.groups.map(function(g){
+            var color=g.color||'secondary';
+            var icon=g.icon||'shield-fill';
+            var textClass=(color==='warning'||color==='light')?'text-dark':'text-white';
+            var memberHtml=g.members&&g.members.length
+                ?g.members.map(function(m){
+                    return '<span class="badge bg-light text-dark border me-1 mb-1"><i class="bi bi-person-circle me-1"></i>'+m+
+                        ' <span style="cursor:pointer;color:#dc3545" onclick="removeBuiltinMember(\''+g.name+'\',\''+m+'\')">&times;</span></span>';
+                }).join('')
+                :'<small class="text-muted">No members</small>';
+            return '<div class="col-md-6 col-xl-4"><div class="card h-100">'+
+                '<div class="card-header bg-'+color+' '+textClass+' d-flex justify-content-between align-items-center">'+
+                '<span><i class="bi bi-'+icon+' me-2"></i><strong>'+g.name+'</strong></span>'+
+                '<span class="badge bg-white text-dark">'+g.member_count+' members</span></div>'+
+                '<div class="card-body">'+
+                '<p class="text-muted small mb-1"><code>BUILTIN\\'+g.name+'</code></p>'+
+                '<p class="small mb-3">'+g.description+'</p>'+
+                '<div class="mb-2">'+memberHtml+'</div></div>'+
+                '<div class="card-footer"><button class="btn btn-sm btn-'+color+' '+textClass+' w-100" onclick="openBuiltinModal(\''+g.name+'\')">'+
+                '<i class="bi bi-person-plus-fill"></i> Manage Members</button></div></div></div>';
         }).join('');
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function createShare() {
-    var payload = {
-        name: document.getElementById('in-sharename').value.trim(),
-        path: document.getElementById('in-sharepath').value.trim(),
-        comment: document.getElementById('in-sharecomment').value.trim(),
-        browseable: document.getElementById('in-browseable').checked,
-        guest_ok: document.getElementById('in-guestok').checked,
-        abse: document.getElementById('in-abse').checked,
-        create_mask: document.getElementById('in-create-mask').value,
-        directory_mask: document.getElementById('in-dir-mask').value
-    };
-    if (!payload.name || !payload.path) { showAlert('Name and Path required', 'warning'); return; }
-    try {
-        await api('POST', '/api/shares', payload);
-        showAlert('Share "' + payload.name + '" created');
-        bootstrap.Modal.getInstance(document.getElementById('modalShare')).hide();
-        loadShares();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function openBuiltinModal(groupName) {
+    S.currentBuiltin=groupName;
+    var g=BUILTIN_DATA[groupName]||{};
+    document.getElementById('builtin-modal-title').innerHTML='<i class="bi bi-shield-fill"></i> BUILTIN\\'+groupName;
+    document.getElementById('builtin-modal-desc').textContent=g.description||'';
+    document.getElementById('in-builtin-username').value='';
+    renderBuiltinMembers(groupName,g.members||[]);
+    new bootstrap.Modal(document.getElementById('modalBuiltin')).show();
 }
 
-async function deleteShare(name) {
-    if (!confirm('Remove share "' + name + '"? Files will NOT be deleted.')) return;
-    try {
-        await api('DELETE', '/api/shares/' + name);
-        showAlert('Share "' + name + '" removed');
-        loadShares();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function renderBuiltinMembers(groupName, members) {
+    var container=document.getElementById('builtin-modal-members');
+    if(!members||!members.length){ container.innerHTML='<small class="text-muted">No members</small>'; return; }
+    container.innerHTML=members.map(function(m){
+        return '<span class="badge bg-dark me-1 mb-1"><i class="bi bi-person-circle me-1"></i>'+m+
+            ' <span style="cursor:pointer;color:#ff6b6b" onclick="removeBuiltinMember(\''+groupName+'\',\''+m+'\')">&times;</span></span>';
+    }).join('');
 }
 
-async function initPermissions() {
-    try {
-        var d = await api('GET', '/api/shares');
-        S.shares = d && d.shares ? d.shares : [];
-        var sel = document.getElementById('perm-share-select');
-        sel.innerHTML = '<option value="">-- Select a share --</option>';
-        S.shares.forEach(function(s) {
-            sel.innerHTML += '<option value="' + s.name + '">' + s.name + ' (' + s.path + ')</option>';
-        });
-        document.getElementById('perm-container').innerHTML = '';
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function addBuiltinMember() {
+    var username=document.getElementById('in-builtin-username').value.trim();
+    if(!username){ showAlert('Enter a username','warning'); return; }
+    apiCall('POST','/api/builtin/'+S.currentBuiltin+'/members',{username:username},function(d){
+        showAlert(d.message||'Added "'+username+'"','success');
+        document.getElementById('in-builtin-username').value='';
+        if(BUILTIN_DATA[S.currentBuiltin]) BUILTIN_DATA[S.currentBuiltin].members=d.members||[];
+        renderBuiltinMembers(S.currentBuiltin,d.members||[]);
+        loadBuiltin();
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-function makePermSection(title, color, users, shareName, permType, inputId) {
-    var badgeClass = 'bg-' + color;
-    var textClass = (color === 'warning') ? 'text-dark' : '';
-    var badges = users && users.length ? users.map(function(u) {
-        return '<span class="badge ' + badgeClass + ' ' + textClass + ' me-1 mb-1">' + u +
-            ' <span style="cursor:pointer" onclick="quickRevoke(\'' + shareName + '\',\'' + permType + '\',\'' + u + '\')">&times;</span></span>';
-    }).join('') : '<small class="text-muted">None</small>';
-
-    return '<div class="col-md-4"><div class="card h-100">' +
-        '<div class="card-header bg-' + color + ' ' + textClass + ' text-' + (color === 'warning' ? 'dark' : 'white') + '">' + title + ' <span class="badge bg-white text-dark float-end">' + (users ? users.length : 0) + '</span></div>' +
-        '<div class="card-body"><div class="mb-2">' + badges + '</div>' +
-        '<div class="input-group input-group-sm">' +
-        '<input type="text" class="form-control" id="' + inputId + '" placeholder="user or @group">' +
-        '<button class="btn btn-' + color + ' ' + textClass + '" onclick="quickGrant(\'' + shareName + '\',\'' + permType + '\',\'' + inputId + '\')">+</button>' +
-        '</div></div></div></div>';
+function removeBuiltinMember(groupName, username) {
+    if(!confirm('Remove "'+username+'" from BUILTIN\\'+groupName+'?')) return;
+    apiCall('DELETE','/api/builtin/'+groupName+'/members/'+username,null,function(d){
+        showAlert(d.message||'Removed "'+username+'"','success');
+        if(BUILTIN_DATA[groupName]) BUILTIN_DATA[groupName].members=d.members||[];
+        renderBuiltinMembers(groupName,d.members||[]);
+        loadBuiltin();
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function loadPermissions() {
-    var name = document.getElementById('perm-share-select').value;
-    var container = document.getElementById('perm-container');
-    if (!name) { container.innerHTML = ''; return; }
-    container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
-    try {
-        var s = await api('GET', '/api/shares/' + name);
-        var html = '<div class="row g-3 mb-3">' +
-            makePermSection('Valid Users', 'primary', s.valid_users, name, 'valid_users', 'qi-valid') +
-            makePermSection('Write List', 'success', s.write_list, name, 'write_list', 'qi-write') +
-            makePermSection('Read List', 'info', s.read_list, name, 'read_list', 'qi-read') +
-            makePermSection('Admin Users', 'dark', s.admin_users, name, 'admin_users', 'qi-admin') +
-            makePermSection('Blocked Users', 'danger', s.invalid_users, name, 'invalid_users', 'qi-block') +
-            '</div>';
-
-        html += '<div class="card"><div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> Settings — ' + name + '</div><div class="card-body"><div class="row g-3">';
-        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.read_only ? 'checked' : '') + ' onchange="patchShare(\'' + name + '\',{read_only:this.checked})"><label class="form-check-label small">Read-Only</label></div></div>';
-        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.guest_ok ? 'checked' : '') + ' onchange="patchShare(\'' + name + '\',{guest_ok:this.checked})"><label class="form-check-label small">Guest OK</label></div></div>';
-        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.browseable ? 'checked' : '') + ' onchange="patchShare(\'' + name + '\',{browseable:this.checked})"><label class="form-check-label small">Browseable</label></div></div>';
-        html += '<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" ' + (s.abse ? 'checked' : '') + ' onchange="toggleShareAbse(\'' + name + '\',this.checked)"><label class="form-check-label small">ABSE</label></div></div>';
-        html += '<div class="col-auto"><label class="form-label small mb-1">Create Mask</label><select class="form-select form-select-sm" onchange="patchShare(\'' + name + '\',{create_mask:this.value})">';
-        ['0755','0644','0660','0777'].forEach(function(m) { html += '<option value="' + m + '" ' + (s.create_mask === m ? 'selected' : '') + '>' + m + '</option>'; });
-        html += '</select></div>';
-        html += '<div class="col-auto"><label class="form-label small mb-1">Dir Mask</label><select class="form-select form-select-sm" onchange="patchShare(\'' + name + '\',{directory_mask:this.value})">';
-        ['0755','0750','0770','0777'].forEach(function(m) { html += '<option value="' + m + '" ' + (s.directory_mask === m ? 'selected' : '') + '>' + m + '</option>'; });
-        html += '</select></div>';
-        html += '</div></div></div>';
-
-        container.innerHTML = html;
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+// ── AD / LDAP ─────────────────────────────────
+function loadAD() {
+    apiCall('GET','/api/ad/status',null,function(d){
+        document.getElementById('ad-domain-label').textContent='Domain: '+d.domain+' | DC: '+d.ldap_server;
+        var badge=document.getElementById('ad-status-badge');
+        badge.innerHTML=d.connected
+            ?'<span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill"></i> Connected</span>'
+            :'<span class="badge bg-danger fs-6"><i class="bi bi-x-circle-fill"></i> Disconnected</span>';
+    });
+    loadADUsers('');
 }
 
-async function quickGrant(shareName, permType, inputId) {
-    var newUser = document.getElementById(inputId) ? document.getElementById(inputId).value.trim() : '';
-    if (!newUser) { showAlert('Enter a username or @group', 'warning'); return; }
-    try {
-        var s = await api('GET', '/api/shares/' + shareName);
-        var lists = { valid_users: s.valid_users, write_list: s.write_list, read_list: s.read_list, admin_users: s.admin_users, invalid_users: s.invalid_users };
-        var current = lists[permType] || [];
-        if (current.indexOf(newUser) >= 0) { showAlert('"' + newUser + '" already in list', 'warning'); return; }
-        current.push(newUser);
-        await api('POST', '/api/shares/' + shareName + '/permissions', { users: current, permission_type: permType });
-        showAlert('Granted "' + newUser + '"');
-        loadPermissions();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
-}
+function filterOU(ou, btn) {
+    AD_CURRENT_OU = ou;
+    document.querySelectorAll('#tab-ad .btn-group-ou button, #tab-ad button[onclick^="filterOU"]').forEach(function(b){ b.classList.remove('active','btn-dark','btn-primary','btn-success','btn-warning','btn-info'); b.classList.add('btn-outline-secondary'); });
+    if(btn) { btn.classList.remove('btn-outline-primary','btn-outline-success','btn-outline-warning','btn-outline-info','btn-outline-secondary'); btn.classList.add('active'); }
 
-async function quickRevoke(shareName, permType, username) {
-    if (!confirm('Revoke "' + username + '"?')) return;
-    try {
-        var s = await api('GET', '/api/shares/' + shareName);
-        var lists = { valid_users: s.valid_users, write_list: s.write_list, read_list: s.read_list, admin_users: s.admin_users, invalid_users: s.invalid_users };
-        var current = (lists[permType] || []).filter(function(u) { return u !== username; });
-        await api('POST', '/api/shares/' + shareName + '/permissions', { users: current, permission_type: permType });
-        showAlert('Revoked "' + username + '"');
-        loadPermissions();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
-}
-
-async function patchShare(shareName, updates) {
-    try {
-        await api('PATCH', '/api/shares/' + shareName, updates);
-        showAlert('Updated', 'info');
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
-}
-
-async function openPermModal(shareName) {
-    S.currentShare = shareName;
-    document.getElementById('perm-modal-title').innerHTML = '<i class="bi bi-lock-fill"></i> Permissions — ' + shareName;
-    document.getElementById('perm-modal-body').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
-    new bootstrap.Modal(document.getElementById('modalPerm')).show();
-    try {
-        var results = await Promise.all([
-            api('GET', '/api/shares/' + shareName),
-            api('GET', '/api/users'),
-            api('GET', '/api/groups')
-        ]);
-        var share = results[0];
-        var users = results[1] && results[1].users ? results[1].users : [];
-        var groups = results[2] && results[2].groups ? results[2].groups : [];
-
-        var principals = users.map(function(u) { return { label: u.username, value: u.username, type: 'user' }; })
-            .concat(groups.map(function(g) { return { label: g, value: '@' + g, type: 'group' }; }));
-
-        var rows = principals.map(function(p) {
-            var sid = p.value.replace('@', 'grp_');
-            var isValid = share.valid_users && share.valid_users.indexOf(p.value) >= 0;
-            var isWrite = share.write_list && share.write_list.indexOf(p.value) >= 0;
-            var isRead  = share.read_list && share.read_list.indexOf(p.value) >= 0;
-            var isAdmin = share.admin_users && share.admin_users.indexOf(p.value) >= 0;
-            var isBlock = share.invalid_users && share.invalid_users.indexOf(p.value) >= 0;
-            return '<div class="d-flex align-items-center px-3 py-2 border-bottom">' +
-                '<span class="me-auto"><i class="bi bi-' + (p.type === 'group' ? 'diagram-3 text-info' : 'person-circle text-primary') + ' me-1"></i><strong>' + p.label + '</strong>' +
-                (p.type === 'group' ? '<span class="badge bg-info text-dark ms-1 small">group</span>' : '') + '</span>' +
-                '<div class="d-flex gap-3 small">' +
-                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="v_' + sid + '" value="' + p.value + '" data-ptype="valid" ' + (isValid ? 'checked' : '') + '><label class="form-check-label text-primary" for="v_' + sid + '">Valid</label></div>' +
-                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="w_' + sid + '" value="' + p.value + '" data-ptype="write" ' + (isWrite ? 'checked' : '') + '><label class="form-check-label text-success" for="w_' + sid + '">Write</label></div>' +
-                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="r_' + sid + '" value="' + p.value + '" data-ptype="read" ' + (isRead ? 'checked' : '') + '><label class="form-check-label text-info" for="r_' + sid + '">Read</label></div>' +
-                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="a_' + sid + '" value="' + p.value + '" data-ptype="admin" ' + (isAdmin ? 'checked' : '') + '><label class="form-check-label" for="a_' + sid + '">Admin</label></div>' +
-                '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="b_' + sid + '" value="' + p.value + '" data-ptype="block" ' + (isBlock ? 'checked' : '') + '><label class="form-check-label text-danger" for="b_' + sid + '">Block</label></div>' +
-                '</div></div>';
-        }).join('');
-
-        document.getElementById('perm-modal-body').innerHTML =
-            '<p class="text-muted small mb-2"><strong class="text-primary">Valid</strong>=เข้าได้ <strong class="text-success">Write</strong>=เขียน <strong class="text-info">Read</strong>=อ่าน <strong>Admin</strong>=Full <strong class="text-danger">Block</strong>=บล็อค</p>' +
-            '<div class="border rounded" style="max-height:400px;overflow-y:auto">' + (rows || '<p class="text-center py-4 text-muted">No users</p>') + '</div>';
-    } catch(e) {
-        document.getElementById('perm-modal-body').innerHTML = '<div class="alert alert-danger">Error: ' + e.message + '</div>';
+    if(ou === 'OU=Group') {
+        document.getElementById('ad-users-card').style.display = 'none';
+        document.getElementById('ad-groups-card').style.display = 'block';
+        loadADGroups();
+    } else {
+        document.getElementById('ad-users-card').style.display = 'block';
+        document.getElementById('ad-groups-card').style.display = 'none';
+        loadADUsers(ou);
     }
 }
 
-async function saveModalPermissions() {
-    var shareName = S.currentShare;
-    var validUsers   = Array.from(document.querySelectorAll('[data-ptype="valid"]:checked')).map(function(el) { return el.value; });
-    var writeList    = Array.from(document.querySelectorAll('[data-ptype="write"]:checked')).map(function(el) { return el.value; });
-    var readList     = Array.from(document.querySelectorAll('[data-ptype="read"]:checked')).map(function(el) { return el.value; });
-    var adminUsers   = Array.from(document.querySelectorAll('[data-ptype="admin"]:checked')).map(function(el) { return el.value; });
-    var invalidUsers = Array.from(document.querySelectorAll('[data-ptype="block"]:checked')).map(function(el) { return el.value; });
-try {
-        await Promise.all([
-            api('POST', '/api/shares/' + shareName + '/permissions', { users: validUsers, permission_type: 'valid_users' }),
-            api('POST', '/api/shares/' + shareName + '/permissions', { users: writeList, permission_type: 'write_list' }),
-            api('POST', '/api/shares/' + shareName + '/permissions', { users: readList, permission_type: 'read_list' }),
-            api('POST', '/api/shares/' + shareName + '/permissions', { users: adminUsers, permission_type: 'admin_users' }),
-            api('POST', '/api/shares/' + shareName + '/permissions', { users: invalidUsers, permission_type: 'invalid_users' })
-        ]);
-        showAlert('Permissions saved for "' + shareName + '"');
-        bootstrap.Modal.getInstance(document.getElementById('modalPerm')).hide();
+function loadADUsers(ou) {
+    document.getElementById('tbody-ad-users').innerHTML='<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+    var url = '/api/ad/users?limit=100';
+    if(ou) url += '&ou='+encodeURIComponent(ou);
+    apiCall('GET',url,null,function(d){
+        document.getElementById('ad-users-count').textContent=d.count||0;
+        var tbody=document.getElementById('tbody-ad-users');
+        if(!d.users||!d.users.length){
+            tbody.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">No users found</td></tr>';
+            return;
+        }
+        tbody.innerHTML=d.users.map(function(u){
+            var ouBadgeColor = {Lecturer:'primary',Staff:'success',Student:'warning',Users:'secondary'}[u.ou]||'secondary';
+            return '<tr>'+
+                '<td><code>'+u.username+'</code></td>'+
+                '<td>'+u.display_name+'</td>'+
+                '<td><small class="text-muted">'+u.email+'</small></td>'+
+                '<td><span class="badge bg-'+ouBadgeColor+'">'+u.ou+'</span></td>'+
+                '<td><button class="btn btn-xs btn-sm btn-outline-primary py-0" onclick="openADAddUser(\''+u.username+'\')">'+
+                '<i class="bi bi-plus"></i> Add to Share</button></td>'+
+                '</tr>';
+        }).join('');
+    },function(e){ showAlert('Error loading AD users: '+e.message,'danger'); });
+}
+
+function loadADGroups() {
+    document.getElementById('tbody-ad-groups').innerHTML='<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+    apiCall('GET','/api/ad/groups?limit=100',null,function(d){
+        document.getElementById('ad-groups-count').textContent=d.count||0;
+        var tbody=document.getElementById('tbody-ad-groups');
+        if(!d.groups||!d.groups.length){
+            tbody.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4">No groups found</td></tr>';
+            return;
+        }
+        tbody.innerHTML=d.groups.map(function(g){
+            return '<tr>'+
+                '<td><strong>'+g.name+'</strong></td>'+
+                '<td><small class="text-muted">'+g.description+'</small></td>'+
+                '<td><span class="badge bg-secondary">'+g.ou+'</span></td>'+
+                '<td><code class="small">'+g.smb_name+'</code> '+
+                '<button class="btn btn-xs btn-sm btn-outline-secondary py-0" onclick="navigator.clipboard.writeText(\''+g.smb_name+'\').then(function(){showAlert(\'Copied: '+g.smb_name+'\',\'info\')})">'+
+                '<i class="bi bi-clipboard"></i></button></td>'+
+                '</tr>';
+        }).join('');
+    },function(e){ showAlert('Error loading AD groups: '+e.message,'danger'); });
+}
+
+function searchAD() {
+    var q = document.getElementById('ad-search-input').value.trim();
+    if(AD_CURRENT_OU === 'OU=Group') {
+        var url = '/api/ad/groups?limit=100';
+        if(q) url += '&q='+encodeURIComponent(q);
+        document.getElementById('tbody-ad-groups').innerHTML='<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+        apiCall('GET',url,null,function(d){
+            document.getElementById('ad-groups-count').textContent=d.count||0;
+            var tbody=document.getElementById('tbody-ad-groups');
+            if(!d.groups||!d.groups.length){ tbody.innerHTML='<tr><td colspan="4" class="text-center text-muted">No results</td></tr>'; return; }
+            tbody.innerHTML=d.groups.map(function(g){
+                return '<tr><td><strong>'+g.name+'</strong></td><td><small>'+g.description+'</small></td>'+
+                    '<td><span class="badge bg-secondary">'+g.ou+'</span></td>'+
+                    '<td><code class="small">'+g.smb_name+'</code></td></tr>';
+            }).join('');
+        },function(e){ showAlert('Error: '+e.message,'danger'); });
+    } else {
+        var url = '/api/ad/users?limit=100';
+        if(q) url += '&q='+encodeURIComponent(q);
+        if(AD_CURRENT_OU) url += '&ou='+encodeURIComponent(AD_CURRENT_OU);
+        document.getElementById('tbody-ad-users').innerHTML='<tr><td colspan="5" class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></td></tr>';
+        apiCall('GET',url,null,function(d){
+            document.getElementById('ad-users-count').textContent=d.count||0;
+            var tbody=document.getElementById('tbody-ad-users');
+            if(!d.users||!d.users.length){ tbody.innerHTML='<tr><td colspan="5" class="text-center text-muted">No results</td></tr>'; return; }
+            tbody.innerHTML=d.users.map(function(u){
+                var ouBadgeColor={Lecturer:'primary',Staff:'success',Student:'warning',Users:'secondary'}[u.ou]||'secondary';
+                return '<tr><td><code>'+u.username+'</code></td><td>'+u.display_name+'</td>'+
+                    '<td><small class="text-muted">'+u.email+'</small></td>'+
+                    '<td><span class="badge bg-'+ouBadgeColor+'">'+u.ou+'</span></td>'+
+                    '<td><button class="btn btn-sm btn-outline-primary py-0" onclick="openADAddUser(\''+u.username+'\')"><i class="bi bi-plus"></i> Add to Share</button></td></tr>';
+            }).join('');
+        },function(e){ showAlert('Error: '+e.message,'danger'); });
+    }
+}
+
+function openADAddUser(username) {
+    S.adUser = username;
+    document.getElementById('ad-add-username').textContent = username;
+    var sel = document.getElementById('ad-add-share-select');
+    sel.innerHTML = '<option value="">-- Select share --</option>';
+    apiCall('GET','/api/shares',null,function(d){
+        (d.shares||[]).forEach(function(s){
+            sel.innerHTML += '<option value="'+s.name+'">'+s.name+'</option>';
+        });
+    });
+    new bootstrap.Modal(document.getElementById('modalADAddUser')).show();
+}
+
+function doAddADUserToShare() {
+    var shareName = document.getElementById('ad-add-share-select').value;
+    var permType = document.querySelector('input[name="ad-perm-type"]:checked').value;
+    if(!shareName) { showAlert('Select a share','warning'); return; }
+    apiCall('GET','/api/shares/'+shareName,null,function(share){
+        var lists = {
+            valid_users: share.valid_users||[],
+            write_list: share.write_list||[],
+            invalid_users: share.invalid_users||[]
+        };
+        var current = lists[permType]||[];
+        if(current.indexOf(S.adUser)>=0){ showAlert('"'+S.adUser+'" already in '+permType,'warning'); return; }
+        current.push(S.adUser);
+        apiCall('POST','/api/shares/'+shareName+'/permissions',{users:current,permission_type:permType},function(d){
+            showAlert('"'+S.adUser+'" added to '+shareName+' ('+permType.replace('_',' ')+')','success');
+            bootstrap.Modal.getInstance(document.getElementById('modalADAddUser')).hide();
+        },function(e){ showAlert('Error: '+e.message,'danger'); });
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
+}
+
+// ── Shares ────────────────────────────────────
+function loadShares() {
+    apiCall('GET','/api/shares',null,function(d){
+        S.shares=d.shares||[];
+        var grid=document.getElementById('shares-grid');
+        if(!S.shares.length){ grid.innerHTML='<div class="col"><div class="alert alert-info">No shares. Click Add Share.</div></div>'; return; }
+        grid.innerHTML=S.shares.map(function(s){
+            var vb=s.valid_users&&s.valid_users.length?s.valid_users.map(function(u){return '<span class="badge bg-primary me-1">'+u+'</span>';}).join(''):'<small class="text-muted">All</small>';
+            var wb=s.write_list&&s.write_list.length?s.write_list.map(function(u){return '<span class="badge bg-success me-1">'+u+'</span>';}).join(''):'<small class="text-muted">None</small>';
+            var rb=s.read_list&&s.read_list.length?s.read_list.map(function(u){return '<span class="badge bg-info me-1">'+u+'</span>';}).join(''):'<small class="text-muted">None</small>';
+            var bb=s.invalid_users&&s.invalid_users.length?s.invalid_users.map(function(u){return '<span class="badge bg-danger me-1">'+u+'</span>';}).join(''):'<small class="text-muted">None</small>';
+            return '<div class="col-md-6 col-xl-4"><div class="card share-card h-100">'+
+                '<div class="card-header d-flex justify-content-between align-items-center">'+
+                '<span><i class="bi bi-folder2-open text-warning me-1"></i><strong>'+s.name+'</strong></span>'+
+                '<div>'+(s.abse?'<span class="badge bg-dark me-1">ABSE</span>':'')+
+                '<span class="badge '+(s.guest_ok?'bg-warning text-dark':'bg-secondary')+' me-1">'+(s.guest_ok?'Guest':'Private')+'</span>'+
+                '<span class="badge '+(s.read_only?'bg-info':'bg-success')+'">'+(s.read_only?'RO':'RW')+'</span></div></div>'+
+                '<div class="card-body">'+
+                '<p class="small text-muted mb-2"><code>'+s.path+'</code></p>'+
+                '<div class="row g-1 small mb-1"><div class="col-6"><strong class="text-muted">Valid:</strong><br>'+vb+'</div>'+
+                '<div class="col-6"><strong class="text-muted">Write:</strong><br>'+wb+'</div></div>'+
+                '<div class="row g-1 small"><div class="col-6"><strong class="text-muted">Read:</strong><br>'+rb+'</div>'+
+                '<div class="col-6"><strong class="text-muted">Block:</strong><br>'+bb+'</div></div></div>'+
+                '<div class="card-footer d-flex gap-2">'+
+                '<button class="btn btn-sm btn-dark flex-grow-1" onclick="openPermModal(\''+s.name+'\')"><i class="bi bi-lock"></i> Permissions</button>'+
+                '<button class="btn btn-sm btn-outline-danger" onclick="deleteShare(\''+s.name+'\')"><i class="bi bi-trash"></i></button>'+
+                '</div></div></div>';
+        }).join('');
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
+}
+
+function createShare() {
+    var payload={
+        name:document.getElementById('in-sharename').value.trim(),
+        path:document.getElementById('in-sharepath').value.trim(),
+        comment:document.getElementById('in-sharecomment').value.trim(),
+        browseable:document.getElementById('in-browseable').checked,
+        guest_ok:document.getElementById('in-guestok').checked,
+        abse:document.getElementById('in-abse').checked,
+        create_mask:document.getElementById('in-create-mask').value,
+        directory_mask:document.getElementById('in-dir-mask').value
+    };
+    if(!payload.name||!payload.path){ showAlert('Name and Path required','warning'); return; }
+    apiCall('POST','/api/shares',payload,function(d){
+        showAlert('Share "'+payload.name+'" created');
+        bootstrap.Modal.getInstance(document.getElementById('modalShare')).hide();
         loadShares();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function loadSettings() {
-    try {
-        var results = await Promise.all([api('GET', '/api/shares/global'), api('GET', '/api/shares')]);
-        var g = results[0];
-        var shares = results[1];
-        document.getElementById('sw-global-abse').checked = g.abse;
-        var statusBox = document.getElementById('abse-status');
-        statusBox.className = 'alert small mb-0 alert-' + (g.abse ? 'success' : 'secondary');
-        statusBox.innerHTML = g.abse
-            ? '<i class="bi bi-eye-slash-fill"></i> <strong>ABSE เปิดอยู่</strong> — Users มองไม่เห็น Share ที่ไม่มีสิทธิ์'
-            : '<i class="bi bi-eye-fill"></i> <strong>ABSE ปิดอยู่</strong> — Users เห็น Share ทั้งหมด';
-        var tbody = document.getElementById('tbody-share-abse');
-        var shareList = shares && shares.shares ? shares.shares : [];
-        tbody.innerHTML = shareList.length ? shareList.map(function(s) {
-            return '<tr><td><i class="bi bi-folder2-open text-warning"></i> ' + s.name + '</td>' +
-                '<td><code class="small">' + s.path + '</code></td>' +
-                '<td class="text-center"><div class="form-check form-switch d-flex justify-content-center mb-0">' +
-                '<input class="form-check-input" type="checkbox" ' + (s.abse ? 'checked' : '') +
-                ' onchange="toggleShareAbse(\'' + s.name + '\', this.checked)" style="width:2.5rem;height:1.3rem"></div></td></tr>';
-        }).join('') : '<tr><td colspan="3" class="text-center text-muted">No shares</td></tr>';
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function deleteShare(name) {
+    if(!confirm('Remove share "'+name+'"? Files will NOT be deleted.')) return;
+    apiCall('DELETE','/api/shares/'+name,null,function(d){ showAlert('Share "'+name+'" removed'); loadShares(); },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function toggleGlobalAbse(enabled) {
-    try {
-        var d = await api('PATCH', '/api/shares/global', { abse: enabled });
-        showAlert(d && d.message ? d.message : 'Updated', enabled ? 'success' : 'warning');
-        loadSettings();
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); }
+function initPermissions() {
+    apiCall('GET','/api/shares',null,function(d){
+        S.shares=d.shares||[];
+        var sel=document.getElementById('perm-share-select');
+        sel.innerHTML='<option value="">-- Select a share --</option>';
+        S.shares.forEach(function(s){ sel.innerHTML+='<option value="'+s.name+'">'+s.name+' ('+s.path+')</option>'; });
+        document.getElementById('perm-container').innerHTML='';
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function toggleShareAbse(shareName, enabled) {
-    try {
-        await api('PATCH', '/api/shares/' + shareName + '/abse?enabled=' + enabled);
-        showAlert('ABSE ' + (enabled ? 'enabled' : 'disabled') + ' for "' + shareName + '"', 'success');
-    } catch(e) { showAlert('Error: ' + e.message, 'danger'); loadSettings(); }
+function makePermSection(title, color, users, shareName, permType, inputId) {
+    var textClass=(color==='warning'||color==='light')?'text-dark':'text-white';
+    var badges=users&&users.length
+        ?users.map(function(u){
+            return '<span class="badge bg-'+color+' '+(color==='warning'?'text-dark':'')+' me-1 mb-1">'+u+
+                ' <span style="cursor:pointer" onclick="quickRevoke(\''+shareName+'\',\''+permType+'\',\''+u+'\')">&times;</span></span>';
+        }).join('')
+        :'<small class="text-muted">None</small>';
+    return '<div class="col-md-4"><div class="card h-100">'+
+        '<div class="card-header bg-'+color+' '+textClass+'">'+title+
+        '<span class="badge bg-white text-dark float-end">'+(users?users.length:0)+'</span></div>'+
+        '<div class="card-body"><div class="mb-2">'+badges+'</div>'+
+        '<div class="input-group input-group-sm">'+
+        '<input type="text" class="form-control" id="'+inputId+'" placeholder="user or @group">'+
+        '<button class="btn btn-'+color+' '+(color==='warning'?'text-dark':'')+'" onclick="quickGrant(\''+shareName+'\',\''+permType+'\',\''+inputId+'\')">+</button>'+
+        '</div></div></div></div>';
 }
 
-async function loadAudit() {
-    try {
-        var d = await api('GET', '/api/audit/logs?limit=100');
-        var logs = d && d.logs ? d.logs : [];
-        document.getElementById('tbody-audit').innerHTML = logs.length ? logs.map(function(l) {
-            return '<tr><td class="small">' + new Date(l.timestamp).toLocaleString('th-TH') + '</td>' +
-                '<td><span class="badge bg-secondary">' + l.action + '</span></td>' +
-                '<td>' + l.actor + '</td>' +
-                '<td class="small">' + l.resource_type + '/' + l.resource_name + '</td>' +
-                '<td><span class="badge bg-' + (l.status === 'success' ? 'success' : 'danger') + '">' + l.status + '</span></td></tr>';
-        }).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">No logs</td></tr>';
-    } catch(e) { console.error(e); }
+function loadPermissions() {
+    var name=document.getElementById('perm-share-select').value;
+    var container=document.getElementById('perm-container');
+    if(!name){ container.innerHTML=''; return; }
+    container.innerHTML='<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+    apiCall('GET','/api/shares/'+name,null,function(s){
+        var html='<div class="row g-3 mb-3">'+
+            makePermSection('Valid Users','primary',s.valid_users,name,'valid_users','qi-valid')+
+            makePermSection('Write List','success',s.write_list,name,'write_list','qi-write')+
+            makePermSection('Read List','info',s.read_list,name,'read_list','qi-read')+
+            makePermSection('Admin Users','dark',s.admin_users,name,'admin_users','qi-admin')+
+            makePermSection('Blocked Users','danger',s.invalid_users,name,'invalid_users','qi-block')+
+            '</div>';
+        html+='<div class="card"><div class="card-header fw-bold"><i class="bi bi-gear-fill"></i> Settings — '+name+'</div><div class="card-body"><div class="row g-3">';
+        html+='<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" '+(s.read_only?'checked':'')+' onchange="patchShare(\''+name+'\',{read_only:this.checked})"><label class="form-check-label small">Read-Only</label></div></div>';
+        html+='<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" '+(s.guest_ok?'checked':'')+' onchange="patchShare(\''+name+'\',{guest_ok:this.checked})"><label class="form-check-label small">Guest OK</label></div></div>';
+        html+='<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" '+(s.browseable?'checked':'')+' onchange="patchShare(\''+name+'\',{browseable:this.checked})"><label class="form-check-label small">Browseable</label></div></div>';
+        html+='<div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" '+(s.abse?'checked':'')+' onchange="toggleShareAbse(\''+name+'\',this.checked)"><label class="form-check-label small">ABSE</label></div></div>';
+        html+='<div class="col-auto"><label class="form-label small mb-1">Create Mask</label><select class="form-select form-select-sm" onchange="patchShare(\''+name+'\',{create_mask:this.value})">';
+        ['0755','0644','0660','0777'].forEach(function(m){ html+='<option value="'+m+'" '+(s.create_mask===m?'selected':'')+'>'+m+'</option>'; });
+        html+='</select></div><div class="col-auto"><label class="form-label small mb-1">Dir Mask</label><select class="form-select form-select-sm" onchange="patchShare(\''+name+'\',{directory_mask:this.value})">';
+        ['0755','0750','0770','0777'].forEach(function(m){ html+='<option value="'+m+'" '+(s.directory_mask===m?'selected':'')+'>'+m+'</option>'; });
+        html+='</select></div></div></div></div>';
+        container.innerHTML=html;
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function logout() {
-    if (!confirm('Logout?')) return;
-    await fetch('/auth/logout', { method: 'POST' });
-    window.location.href = '/login';
+function quickGrant(shareName, permType, inputId) {
+    var newUser=document.getElementById(inputId)?document.getElementById(inputId).value.trim():'';
+    if(!newUser){ showAlert('Enter a username or @group','warning'); return; }
+    apiCall('GET','/api/shares/'+shareName,null,function(s){
+        var lists={valid_users:s.valid_users,write_list:s.write_list,read_list:s.read_list,admin_users:s.admin_users,invalid_users:s.invalid_users};
+        var current=lists[permType]||[];
+        if(current.indexOf(newUser)>=0){ showAlert('"'+newUser+'" already in list','warning'); return; }
+        current.push(newUser);
+        apiCall('POST','/api/shares/'+shareName+'/permissions',{users:current,permission_type:permType},function(d){
+            showAlert('Granted "'+newUser+'"'); loadPermissions();
+        },function(e){ showAlert('Error: '+e.message,'danger'); });
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-async function loadCurrentUser() {
-    try {
-        var d = await api('GET', '/auth/me');
-        document.getElementById('current-user').textContent = d && d.username ? d.username : 'User';
-    } catch(e) { console.error(e); }
+function quickRevoke(shareName, permType, username) {
+    if(!confirm('Revoke "'+username+'"?')) return;
+    apiCall('GET','/api/shares/'+shareName,null,function(s){
+        var lists={valid_users:s.valid_users,write_list:s.write_list,read_list:s.read_list,admin_users:s.admin_users,invalid_users:s.invalid_users};
+        var current=(lists[permType]||[]).filter(function(u){return u!==username;});
+        apiCall('POST','/api/shares/'+shareName+'/permissions',{users:current,permission_type:permType},function(d){
+            showAlert('Revoked "'+username+'"'); loadPermissions();
+        },function(e){ showAlert('Error: '+e.message,'danger'); });
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
 }
 
-setInterval(function() {
-    document.getElementById('clock').textContent = new Date().toLocaleString('th-TH');
-}, 1000);
+function patchShare(shareName, updates) {
+    apiCall('PATCH','/api/shares/'+shareName,updates,function(d){
+        showAlert('Updated','info');
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('clock').textContent = new Date().toLocaleString('th-TH');
+function openPermModal(shareName) {
+    S.currentShare=shareName;
+    document.getElementById('perm-modal-title').innerHTML='<i class="bi bi-lock-fill"></i> Permissions — '+shareName;
+    document.getElementById('perm-modal-body').innerHTML='<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+    new bootstrap.Modal(document.getElementById('modalPerm')).show();
+    apiCall('GET','/api/shares/'+shareName,null,function(share){
+        apiCall('GET','/api/users',null,function(ud){
+            apiCall('GET','/api/groups',null,function(gd){
+                var users=ud.users||[];
+                var groups=gd.groups||[];
+                var principals=users.map(function(u){return{label:u.username,value:u.username,type:'user'};})
+                    .concat(groups.map(function(g){return{label:g,value:'@'+g,type:'group'};}));
+                var rows=principals.map(function(p){
+                    var sid=p.value.replace('@','grp_');
+                    var isValid=share.valid_users&&share.valid_users.indexOf(p.value)>=0;
+                    var isWrite=share.write_list&&share.write_list.indexOf(p.value)>=0;
+                    var isRead=share.read_list&&share.read_list.indexOf(p.value)>=0;
+                    var isAdmin=share.admin_users&&share.admin_users.indexOf(p.value)>=0;
+                    var isBlock=share.invalid_users&&share.invalid_users.indexOf(p.value)>=0;
+                    return '<div class="d-flex align-items-center px-3 py-2 border-bottom flex-wrap gap-2">'+
+                        '<span style="min-width:130px"><i class="bi bi-'+(p.type==='group'?'diagram-3 text-info':'person-circle text-primary')+' me-1"></i><strong>'+p.label+'</strong>'+
+                        (p.type==='group'?'<span class="badge bg-info text-dark ms-1 small">group</span>':'')+
+                        '</span><div class="d-flex gap-3 small">'+
+                        '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="v_'+sid+'" value="'+p.value+'" data-ptype="valid" '+(isValid?'checked':'')+'>'+
+                        '<label class="form-check-label text-primary" for="v_'+sid+'">Valid</label></div>'+
+                        '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="w_'+sid+'" value="'+p.value+'" data-ptype="write" '+(isWrite?'checked':'')+'>'+
+                        '<label class="form-check-label text-success" for="w_'+sid+'">Write</label></div>'+
+                        '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="r_'+sid+'" value="'+p.value+'" data-ptype="read" '+(isRead?'checked':'')+'>'+
+                        '<label class="form-check-label text-info" for="r_'+sid+'">Read</label></div>'+
+                        '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="a_'+sid+'" value="'+p.value+'" data-ptype="admin" '+(isAdmin?'checked':'')+'>'+
+                        '<label class="form-check-label" for="a_'+sid+'">Admin</label></div>'+
+                        '<div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="b_'+sid+'" value="'+p.value+'" data-ptype="block" '+(isBlock?'checked':'')+'>'+
+                        '<label class="form-check-label text-danger" for="b_'+sid+'">Block</label></div>'+
+                        '</div></div>';
+                }).join('');
+                document.getElementById('perm-modal-body').innerHTML=
+                    '<p class="text-muted small mb-2"><strong class="text-primary">Valid</strong>=เข้าได้ <strong class="text-success">Write</strong>=เขียน <strong class="text-info">Read</strong>=อ่าน <strong>Admin</strong>=Full <strong class="text-danger">Block</strong>=บล็อค</p>'+
+                    '<div class="border rounded" style="max-height:400px;overflow-y:auto">'+(rows||'<p class="text-center py-4 text-muted">No users</p>')+'</div>';
+            },function(e){ document.getElementById('perm-modal-body').innerHTML='<div class="alert alert-danger">Error: '+e.message+'</div>'; });
+        },function(e){ document.getElementById('perm-modal-body').innerHTML='<div class="alert alert-danger">Error: '+e.message+'</div>'; });
+    },function(e){ document.getElementById('perm-modal-body').innerHTML='<div class="alert alert-danger">Error: '+e.message+'</div>'; });
+}
+
+function saveModalPermissions() {
+    var shareName=S.currentShare;
+    var validUsers=Array.from(document.querySelectorAll('[data-ptype="valid"]:checked')).map(function(el){return el.value;});
+    var writeList=Array.from(document.querySelectorAll('[data-ptype="write"]:checked')).map(function(el){return el.value;});
+    var readList=Array.from(document.querySelectorAll('[data-ptype="read"]:checked')).map(function(el){return el.value;});
+    var adminUsers=Array.from(document.querySelectorAll('[data-ptype="admin"]:checked')).map(function(el){return el.value;});
+    var invalidUsers=Array.from(document.querySelectorAll('[data-ptype="block"]:checked')).map(function(el){return el.value;});
+    var done=0; var total=5; var hasError=false;
+    function onDone(){ done++; if(done===total&&!hasError){ showAlert('Permissions saved for "'+shareName+'"'); bootstrap.Modal.getInstance(document.getElementById('modalPerm')).hide(); loadShares(); } }
+    function onErr(e){ hasError=true; showAlert('Error: '+e.message,'danger'); onDone(); }
+    apiCall('POST','/api/shares/'+shareName+'/permissions',{users:validUsers,permission_type:'valid_users'},onDone,onErr);
+    apiCall('POST','/api/shares/'+shareName+'/permissions',{users:writeList,permission_type:'write_list'},onDone,onErr);
+    apiCall('POST','/api/shares/'+shareName+'/permissions',{users:readList,permission_type:'read_list'},onDone,onErr);
+    apiCall('POST','/api/shares/'+shareName+'/permissions',{users:adminUsers,permission_type:'admin_users'},onDone,onErr);
+    apiCall('POST','/api/shares/'+shareName+'/permissions',{users:invalidUsers,permission_type:'invalid_users'},onDone,onErr);
+}
+
+function loadSettings() {
+    apiCall('GET','/api/shares/global',null,function(g){
+        document.getElementById('sw-global-abse').checked=g.abse;
+        var statusBox=document.getElementById('abse-status');
+        statusBox.className='alert small mb-0 alert-'+(g.abse?'success':'secondary');
+        statusBox.innerHTML=g.abse
+            ?'<i class="bi bi-eye-slash-fill"></i> <strong>ABSE เปิดอยู่</strong>'
+            :'<i class="bi bi-eye-fill"></i> <strong>ABSE ปิดอยู่</strong>';
+    },function(e){ console.error(e); });
+    apiCall('GET','/api/shares',null,function(d){
+        var list=d.shares||[];
+        document.getElementById('tbody-share-abse').innerHTML=list.length
+            ?list.map(function(s){
+                return '<tr><td><i class="bi bi-folder2-open text-warning"></i> '+s.name+'</td>'+
+                    '<td><code class="small">'+s.path+'</code></td>'+
+                    '<td class="text-center"><div class="form-check form-switch d-flex justify-content-center mb-0">'+
+                    '<input class="form-check-input" type="checkbox" '+(s.abse?'checked':'')+
+                    ' onchange="toggleShareAbse(\''+s.name+'\',this.checked)" style="width:2.5rem;height:1.3rem"></div></td></tr>';
+            }).join('')
+            :'<tr><td colspan="3" class="text-center text-muted">No shares</td></tr>';
+    },function(e){ console.error(e); });
+}
+
+function toggleGlobalAbse(enabled) {
+    apiCall('PATCH','/api/shares/global',{abse:enabled},function(d){
+        showAlert(d.message||'Updated',enabled?'success':'warning'); loadSettings();
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
+}
+
+function toggleShareAbse(shareName, enabled) {
+    apiCall('PATCH','/api/shares/'+shareName+'/abse?enabled='+enabled,null,function(d){
+        showAlert('ABSE '+(enabled?'enabled':'disabled')+' for "'+shareName+'"','success');
+    },function(e){ showAlert('Error: '+e.message,'danger'); });
+}
+
+function loadAudit() {
+    apiCall('GET','/api/audit/logs?limit=100',null,function(d){
+        var logs=d.logs||[];
+        document.getElementById('tbody-audit').innerHTML=logs.length
+            ?logs.map(function(l){
+                return '<tr><td class="small">'+new Date(l.timestamp).toLocaleString('th-TH')+'</td>'+
+                    '<td><span class="badge bg-secondary">'+l.action+'</span></td>'+
+                    '<td>'+l.actor+'</td>'+
+                    '<td class="small">'+l.resource_type+'/'+l.resource_name+'</td>'+
+                    '<td><span class="badge bg-'+(l.status==='success'?'success':'danger')+'">'+l.status+'</span></td></tr>';
+            }).join('')
+            :'<tr><td colspan="5" class="text-center text-muted py-4">No logs</td></tr>';
+    },function(e){ console.error(e); });
+}
+
+function logout() {
+    if(!confirm('Logout?')) return;
+    fetch('/auth/logout',{method:'POST'}).then(function(){ window.location.href='/login'; });
+}
+
+function loadCurrentUser() {
+    apiCall('GET','/auth/me',null,function(d){
+        document.getElementById('current-user').textContent=d.username||'User';
+    },function(e){ console.error(e); });
+}
+
+setInterval(function(){ document.getElementById('clock').textContent=new Date().toLocaleString('th-TH'); },1000);
+
+window.onload=function(){
+    document.getElementById('clock').textContent=new Date().toLocaleString('th-TH');
     loadCurrentUser();
     loadDashboard();
-});
+};
 </script>
 </body>
 </html>

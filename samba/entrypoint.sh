@@ -9,16 +9,17 @@ if [ ! -f "$CONF" ]; then
     cp /smb.conf.template "$CONF"
 fi
 
-# สร้าง log directory
 mkdir -p /var/log/samba
 chmod 755 /var/log/samba
+
+# Point winbind to TrueNAS host socket
+mkdir -p /var/run/samba
 
 echo "[*] Starting nmbd..."
 nmbd -F --no-process-group &
 
-echo "[*] Waiting for nmbd to start..."
+echo "[*] Waiting for nmbd..."
 sleep 3
 
-echo "[*] Starting smbd..."
+echo "[*] Starting smbd (using TrueNAS winbind)..."
 exec smbd -F --no-process-group
-
