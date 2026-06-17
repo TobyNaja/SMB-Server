@@ -1,7 +1,7 @@
 [global]
     workgroup = IT
     realm = IT.KMITL.AC.TH
-    netbios name = IT-TRUENAS-SCL
+    netbios name = SMB-67070109
     server string = SMB Manager Server
     security = ads
 

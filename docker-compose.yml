@@ -5,19 +5,27 @@ services:
       context: ./samba
       dockerfile: Dockerfile
     container_name: samba-server
-    hostname: samba-server
+    # แนะนำให้ตั้ง hostname ให้ตรงกับ NetBIOS name ใน smb.conf เพื่อไม่ให้ Kerberos สับสน
+    hostname: SMB-67070109
     networks:
       - smb-network
+    # === บรรทัดสำคัญ: ชี้ไปที่ IP ของเครื่อง DNS/AD Controller ของคณะ ===
+    dns:
+      - 161.246.38.141
+      - 10.70.37.141  # <<< เปลี่ยนเป็น IP ของ AD DNS Server จริงของคุณ
     ports:
       - "1137:137/udp"
       - "1138:138/udp"
       - "1139:139/tcp"
       - "445:445/tcp"
     volumes:
-      - samba-config:/etc/samba
+      # แนะนำให้ bind mount ไฟล์คอนฟิกตรงๆ จากโฟลเดอร์ จะได้แก้ไขบน Host ได้สะดวก
+      - ./samba/smb.conf.template:/smb.conf.template
+      - ./samba/krb5.conf:/etc/krb5.conf
+      # ใช้ Named Volume เก็บเฉพาะข้อมูลภายในและไฟล์กุญแจลับ (Keytab) ไม่ให้หายเวลารีสตาร์ท
       - samba-data:/var/lib/samba
       - ./data/shared:/mnt/shared
-      - /var/run/samba/winbindd:/var/run/samba/winbindd
+      # (เอาบรรทัด /var/run/samba/winbindd ออก เพื่อให้คอนเทนเนอร์รัน Winbind แยกอิสระ)
     environment:
       - WORKGROUP=IT
     healthcheck:
@@ -38,14 +46,12 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - samba-config:/etc/samba
       - samba-data:/var/lib/samba
       - ./data/shared:/mnt/shared
       - /var/run/docker.sock:/var/run/docker.sock
       - ./webapp:/app
     environment:
       - SAMBA_CONTAINER=samba-server
-      - SAMBA_CONFIG_PATH=/etc/samba
       - SAMBA_DATA_PATH=/var/lib/samba
       - API_HOST=0.0.0.0
       - API_PORT=8080
@@ -59,5 +65,4 @@ networks:
     driver: bridge
 
 volumes:
-  samba-config:
   samba-data:
