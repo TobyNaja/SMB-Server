@@ -31,21 +31,17 @@ def _sanitize_users(users: List[str]) -> List[str]:
 
 def _parse_user_list(raw: str) -> List[str]:
     """
-    Parse user list จาก smb.conf ให้รองรับ quoted strings
-
-    Input:  '"IT\\john" @"IT\\Domain Users" localuser'
-    Output: ['IT\\john', '@IT\\Domain Users', 'localuser']
+    Parse user list จาก smb.conf ให้รองรับ quoted strings และ AD Users (Backslash)
     """
     if not raw:
         return []
-    try:
-        # shlex จัดการ quoted strings ให้อัตโนมัติ
-        return [t for t in shlex.split(raw) if t]
-    except ValueError:
-        # fallback กรณี parse ไม่ได้
-        logger.warning(f"shlex.split failed on: {raw!r}, falling back to split()")
-        return [u for u in raw.split() if u]
-
+    
+    import re
+    # ใช้ Regex ดึงคำแยกด้วยช่องว่าง แต่ถ้ามีเครื่องหมายคำพูดครอบ (รวมถึงมี @ นำหน้า) ให้มัดรวมกันไว้
+    tokens = re.findall(r'@?"[^"]+"|\S+', raw)
+    
+    # ถอดเครื่องหมายคำพูด " ออก โดยที่เครื่องหมาย \ ยังอยู่ครบถ้วน
+    return [t.replace('"', '') for t in tokens if t]
 
 def _format_user(user: str) -> str:
     """
@@ -230,7 +226,7 @@ class SmbConfParser:
             'comment':                  comment or f'{name} share',
             'path':                     path,
             'browseable':               'yes',
-            'read only':                'no',
+            'read only':                'yes',
             'guest ok':                 'no',
             'access based share enum':  'no',
             'create mask':              '0755',
