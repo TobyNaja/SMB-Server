@@ -45,13 +45,8 @@ def _parse_user_list(raw: str) -> List[str]:
 
 def _format_user(user: str) -> str:
     """
-    Format user/group entry ให้ถูกต้องตาม smb.conf syntax
-
-    'localadmin'       → 'localadmin'
-    'IT\\john'           → '"IT\\john"'            (quote เพราะมี backslash)
-    '@IT\\Domain Users'  → '@"IT\\Domain Users"'   (group + space)
+    Format user/group entry ให้ถูกต้องตาม smb.conf syntax (FIXED AD Users Backslash)
     """
-    # แยก @ prefix (group indicator) ออกก่อน
     if user.startswith('@'):
         prefix = '@'
         name = user[1:]
@@ -59,9 +54,11 @@ def _format_user(user: str) -> str:
         prefix = ''
         name = user
 
-    # Quote ถ้ามี space หรือ backslash (AD users/groups)
-    if ' ' in name or '\\' in name:
-        return f'{prefix}"{name}"'
+    # 🌟 FIXED: Samba ไม่ต้องการเครื่องหมายคำพูดคู่ครอบตัวที่มี backslash หากไม่มีช่องว่าง
+    # หากมีช่องว่างร่วมด้วย (เช่น ชื่อกลุ่ม AD ที่มีเว้นวรรค) ให้ทำการแทนที่ด้วยดับเบิ้ล \\ ป้องกัน escape char หลุด
+    if ' ' in name:
+        safe_name = name.replace('\\', '\\\\')
+        return f'{prefix}"{safe_name}"'
 
     return f'{prefix}{name}'
 
@@ -223,15 +220,17 @@ class SmbConfParser:
             return False
 
         self.sections[name] = {
-            'comment':                  comment or f'{name} share',
+	    'comment':                  comment or f'{name} share',
             'path':                     path,
             'browseable':               'yes',
             'read only':                'yes',
             'guest ok':                 'no',
             'access based share enum':  'no',
-            'create mask':              '0755',
-            'directory mask':           '0755',
-            'valid users':              '',  # 🌟 FIXED: บังคับให้เป็นค่าว่างเพื่อทำ Deny All ทันทีที่สร้างโฟลเดอร์
+            'create mask':              '0777',  # 🔥 แก้จาก 0755 เป็น 0777
+            'directory mask':           '0777',  # 🔥 แก้จาก 0755 เป็น 0777
+            'force create mode':        '0777',  # 🌟 เพิ่มเข้ามาเพื่อบังคับสิทธิ์ไฟล์ใหม่
+            'force directory mode':     '0777',  # 🌟 เพิ่มเข้ามาเพื่อบังคับสิทธิ์โฟลเดอร์ใหม่
+            'valid users':              '',
         }
         self._save()
         logger.info(f"Share '{name}' created at {path}")
@@ -270,12 +269,58 @@ class SmbConfParser:
         return False
 
     # ════════════════════════════════════════════
-    #  User List Setters
+    #  User List Setters (With Strict Matrix Sync)
     # ════════════════════════════════════════════
+
+    def _sync_share_permissions(self, share_name: str):
+        """
+        🌟 กลไกจัดระเบียบและควบคุมสิทธิ์สอดคล้องตาม Matrix ความปลอดภัยของระบบ
+        ป้องกันการตั้งค่าสิทธิ์ที่ซ้อนทับหรือขัดแย้งกันเองใน shares.conf
+        """
+        if share_name not in self.sections:
+            return
+
+        # ดึงข้อมูลดิบรายชื่อผู้ใช้ปัจจุบันออกมาจากไฟล์คอนฟิกแปลงเป็น List
+        valid = _parse_user_list(self.sections[share_name].get('valid users', ''))
+        write = _parse_user_list(self.sections[share_name].get('write list', ''))
+        read = _parse_user_list(self.sections[share_name].get('read list', ''))
+        admin = _parse_user_list(self.sections[share_name].get('admin users', ''))
+        invalid = _parse_user_list(self.sections[share_name].get('invalid users', ''))
+
+        # 🟥 กลุ่ม Block (invalid users) -> เตะออกจากทุกสิทธิ์ย่อยทันทีเพื่อความปลอดภัยสูงสุด
+        if invalid:
+            valid = [u for u in valid if u not in invalid]
+            write = [u for u in write if u not in invalid]
+            read = [u for u in read if u not in invalid]
+            admin = [u for u in admin if u not in invalid]
+
+        # 👑 กลุ่ม Admin -> ถอดออกจากกลุ่มสิทธิ์ย่อย (Read/Write) เพื่อไม่ให้สิทธิ์ทับซ้อนกันเอง
+        if admin:
+            write = [u for u in write if u not in admin]
+            read = [u for u in read if u not in admin]
+            # เติมเข้าประตูด่านแรก (valid users) โดยอัตโนมัติเพื่อให้ Samba ยอมให้ยืนยันตัวตนผ่าน
+            valid = list(set(valid).union(set(admin)))
+
+        # 🟢 กลุ่ม Valid + Write -> ถอดออกจากกลุ่มสิทธิ์อ่านอย่างเดียว (Read)
+        if write:
+            read = [u for u in read if u not in write]
+            # เติมเข้าประตูด่านแรก (valid users) โดยอัตโนมัติเพื่อให้ Samba ยอมให้เข้าถึงแชร์
+            valid = list(set(valid).union(set(write)))
+
+        # 🔵 กลุ่ม Valid + Read -> ตรวจสอบให้มั่นใจว่ายูสเซอร์เข้าประตูด่านแรกได้
+        if read:
+            valid = list(set(valid).union(set(read)))
+
+        # บันทึกข้อมูลที่เคลียร์ความซ้ำซ้อนและล้อตามเงื่อนไข Matrix กลับเข้าสู่โครงสร้างหลัก
+        self.sections[share_name]['valid users'] = _format_user_list(_sanitize_users(valid))
+        self.sections[share_name]['write list'] = _format_user_list(_sanitize_users(write))
+        self.sections[share_name]['read list'] = _format_user_list(_sanitize_users(read))
+        self.sections[share_name]['admin users'] = _format_user_list(_sanitize_users(admin))
+        self.sections[share_name]['invalid users'] = _format_user_list(_sanitize_users(invalid))
 
     def _set_user_list(self, share_name: str, field: str, users: List[str]) -> bool:
         """
-        Core setter: เขียน user list พร้อม format ที่ถูกต้อง
+        Core setter: บันทึกข้อมูลสิทธิ์พร้อมสั่งรันกลไกจัดระเบียบอัตโนมัติ
         """
         if share_name not in self.sections:
             logger.error(f"Share '{share_name}' not found")
@@ -288,10 +333,11 @@ class SmbConfParser:
             self.sections[share_name][field] = formatted
             logger.info(f"[{share_name}] {field} = {formatted}")
         else:
-            # 🌟 FIXED: เปลี่ยนจาก .pop() เป็นกำหนดค่าเป็น string ว่าง เพื่อบังคับให้ Samba ล็อกสิทธิ์แน่นหนาไม่ปล่อยหลวม
             self.sections[share_name][field] = ''
-            logger.info(f"[{share_name}] {field} set to empty string → Deny All / Locked")
+            logger.info(f"[{share_name}] {field} set to empty string")
 
+        # 🌟 สั่งรันระเบียบสิทธิ์ให้สอดคล้องตามตารางความปลอดภัยก่อนเซฟไฟล์คอนฟิก
+        self._sync_share_permissions(share_name)
         self._save()
         return True
 
