@@ -45,10 +45,7 @@ class LdapService:
         for line in output.split('\n'):
             # continuation line (space indent = multi-line value)
             if line.startswith(' ') and last_key and current:
-                if isinstance(current[last_key], list):
-                    current[last_key][-1] = current[last_key][-1] + line.strip()
-                else:
-                    current[last_key] = current[last_key] + line.strip()
+                current[last_key] = current[last_key] + line.strip()
                 continue
 
             line = line.strip()
@@ -142,9 +139,8 @@ class LdapService:
                 if isinstance(mail_val, list):
                     mail_val = mail_val[0]
 
-                domain_short = settings.ldap_domain.split('.')[0].upper()
                 users.append({
-                    "username": f"{domain_short}\\{sam}",
+                    "username": sam,
                     "display_name": cn_val,
                     "email": mail_val,
                     "department": e.get('department', ''),

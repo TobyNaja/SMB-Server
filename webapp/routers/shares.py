@@ -38,7 +38,10 @@ class GlobalSettings(BaseModel):
     abse: bool
 
 def get_config():
-    return SmbConfParser(os.path.join(settings.samba_config_path, 'smb.conf'))
+    return SmbConfParser(
+        shares_path=os.path.join(settings.samba_config_path, 'shares.conf'),
+        global_path=os.path.join(settings.samba_config_path, 'smb.conf'),
+    )
 
 def get_executor():
     return DockerExecutor(settings.samba_container)
