@@ -33,6 +33,11 @@
 	// Help modal
 	let showHelp = $state(false);
 
+	// Autocomplete dropdown state
+	let selectedIdx = $state(-1);
+	let isFocused   = $state(false);
+	let dropdownEl  = $state<HTMLDivElement | null>(null);
+
 	// Confirm delete
 	let confirmOpen = $state(false);
 	let confirmName = $state('');
@@ -49,8 +54,9 @@
 	let page = $state(1);
 	const PAGE_SIZE = 15;
 
+	$effect(() => { search; page = 1; });
+
 	const filtered = $derived.by(() => {
-		page = 1;
 		if (!search.trim()) return shares;
 		const q = search.toLowerCase();
 		return shares.filter(s =>
@@ -63,7 +69,7 @@
 	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
 
 	// Autocomplete: get last partial token the user is typing
-	const lastToken = $derived(() => {
+	const lastToken = $derived.by(() => {
 		const parts = permInput.split(/[\s,]+/);
 		return parts[parts.length - 1].toLowerCase().trim();
 	});
@@ -74,7 +80,7 @@
 	);
 
 	const suggestions = $derived.by(() => {
-		const tok = lastToken();
+		const tok = lastToken;
 		const entered = enteredValues;
 
 		const users = suggestUsers.filter(u => {
@@ -92,11 +98,49 @@
 		return { users, groups, hasAny: users.length > 0 || groups.length > 0 };
 	});
 
+	// Flat list for keyboard navigation
+	const suggestionList = $derived.by(() => [
+		...suggestions.users.map(u => ({ label: u, value: u, type: 'user' as const })),
+		...suggestions.groups.map(g => ({ label: '@' + g, value: '@' + g, type: 'group' as const })),
+	]);
+
+	const showDropdown = $derived(isFocused && suggestions.hasAny);
+
+	// Reset selection when suggestion list changes
+	$effect(() => { suggestionList; selectedIdx = -1; });
+
+	// Scroll selected item into view
+	$effect(() => {
+		if (selectedIdx < 0 || !dropdownEl) return;
+		const item = dropdownEl.children[selectedIdx] as HTMLElement | undefined;
+		item?.scrollIntoView({ block: 'nearest' });
+	});
+
+	function handlePermKeydown(e: KeyboardEvent) {
+		const list = suggestionList;
+		if (!showDropdown || list.length === 0) return;
+
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			selectedIdx = selectedIdx < list.length - 1 ? selectedIdx + 1 : 0;
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			selectedIdx = selectedIdx > 0 ? selectedIdx - 1 : list.length - 1;
+		} else if ((e.key === 'Tab' || e.key === 'Enter') && selectedIdx >= 0) {
+			e.preventDefault();
+			addSuggestion(list[selectedIdx].value);
+			selectedIdx = -1;
+		} else if (e.key === 'Escape') {
+			isFocused = false;
+			selectedIdx = -1;
+		}
+	}
+
 	async function load() {
 		loading = true;
 		try {
 			const r = await sharesApi.list();
-			shares = r.shares;
+			shares = r.shares ?? [];
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load shares');
 		} finally {
@@ -108,15 +152,15 @@
 		if (suggestLoaded) return;
 		try {
 			const [ur, gr] = await Promise.all([usersApi.list(), groupsApi.list()]);
-			suggestUsers  = ur.users.map(u => u.username);
-			suggestGroups = gr.groups;
+			suggestUsers  = (ur.users ?? []).map(u => u.username);
+			suggestGroups = gr.groups ?? [];
 			suggestLoaded = true;
 		} catch { /* suggestions are a nice-to-have */ }
 	}
 
 	function addSuggestion(value: string) {
 		const parts = permInput.trim().split(/[\s,]+/).filter(Boolean);
-		const tok = lastToken();
+		const tok = lastToken;
 		// Replace partial last token if it's a prefix of the suggestion
 		if (tok && value.toLowerCase().startsWith(tok.replace(/^@/, '')) && parts.length > 0) {
 			parts[parts.length - 1] = value;
@@ -447,36 +491,42 @@
 								{/each}
 							</select>
 
-							<!-- Textarea -->
-							<textarea
-								bind:value={permInput}
-								placeholder="alice  IT\carol  @admins"
-								rows="2"
-								class="input-field w-full resize-none font-mono text-xs"
-							></textarea>
+							<!-- Textarea with IDE-like autocomplete -->
+							<div class="relative">
+								<textarea
+									bind:value={permInput}
+									placeholder="alice  IT\carol  @admins"
+									rows="2"
+									class="input-field w-full resize-none font-mono text-xs"
+									onkeydown={handlePermKeydown}
+									onfocus={() => (isFocused = true)}
+									onblur={() => setTimeout(() => { isFocused = false; selectedIdx = -1; }, 150)}
+								></textarea>
 
-							<!-- Suggestions -->
-							{#if suggestions().hasAny}
-								<div>
-									<p class="mb-1.5 text-xs text-gcp-muted">Quick add:</p>
-									<div class="flex flex-wrap gap-1.5">
-										{#each suggestions().users as u}
+								{#if showDropdown}
+									<div
+										bind:this={dropdownEl}
+										class="absolute left-0 top-full z-20 mt-0.5 w-full overflow-y-auto rounded border border-gcp-border bg-white shadow-lg"
+										style="max-height: 192px"
+									>
+										{#each suggestionList as item, i}
 											<button
-												onclick={() => addSuggestion(u)}
-												class="rounded border border-gcp-border bg-white px-2 py-0.5 font-mono text-xs
-													text-gcp-dark hover:border-gcp-blue hover:bg-gcp-blue-light hover:text-gcp-blue transition-colors"
-											>{u}</button>
-										{/each}
-										{#each suggestions().groups as g}
-											<button
-												onclick={() => addSuggestion('@' + g)}
-												class="rounded border border-gcp-border bg-white px-2 py-0.5 font-mono text-xs
-													text-gcp-muted hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700 transition-colors"
-											>@{g}</button>
+												type="button"
+												onmousedown={(e) => { e.preventDefault(); addSuggestion(item.value); selectedIdx = -1; }}
+												class="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors
+													{i === selectedIdx
+														? 'bg-gcp-blue text-white'
+														: item.type === 'group'
+															? 'text-purple-700 hover:bg-purple-50'
+															: 'text-gcp-dark hover:bg-gcp-bg'}"
+											>
+												<span class="flex-1">{item.label}</span>
+												<span class="font-sans text-[10px] opacity-60">{item.type}</span>
+											</button>
 										{/each}
 									</div>
-								</div>
-							{/if}
+								{/if}
+							</div>
 
 							<div class="flex items-center gap-3">
 								<button onclick={savePermissions} class="btn-primary text-xs px-3 py-1.5">Apply</button>
