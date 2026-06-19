@@ -226,8 +226,8 @@ class SmbConfParser:
             'read only':                'yes',
             'guest ok':                 'no',
             'access based share enum':  'no',
-            'create mask':              '0777',  # 🔥 แก้จาก 0755 เป็น 0777
-            'directory mask':           '0777',  # 🔥 แก้จาก 0755 เป็น 0777
+            'create mask':              '0775',  # 🔥 แก้จาก 0755 เป็น 0777
+            'directory mask':           '0775',  # 🔥 แก้จาก 0755 เป็น 0777
             'force create mode':        '0777',  # 🌟 เพิ่มเข้ามาเพื่อบังคับสิทธิ์ไฟล์ใหม่
             'force directory mode':     '0777',  # 🌟 เพิ่มเข้ามาเพื่อบังคับสิทธิ์โฟลเดอร์ใหม่
             'valid users':              '',

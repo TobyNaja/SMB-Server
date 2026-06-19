@@ -580,7 +580,7 @@ function loadADUsers(ou) {
                 '<td>'+u.display_name+'</td>'+
                 '<td><small class="text-muted">'+u.email+'</small></td>'+
                 '<td><span class="badge bg-'+ouBadgeColor+'">'+u.ou+'</span></td>'+
-                '<td><button class="btn btn-xs btn-sm btn-outline-primary py-0" onclick="openADAddUser(\''+u.username+'\')">'+
+		'<td><button class="btn btn-xs btn-sm btn-outline-primary py-0" onclick="openADAddUser(\''+u.username+'\')">'+
                 '<i class="bi bi-plus"></i> Add to Share</button></td>'+
                 '</tr>';
         }).join('');
@@ -639,7 +639,7 @@ function searchAD() {
                 return '<tr><td><code>'+u.username+'</code></td><td>'+u.display_name+'</td>'+
                     '<td><small class="text-muted">'+u.email+'</small></td>'+
                     '<td><span class="badge bg-'+ouBadgeColor+'">'+u.ou+'</span></td>'+
-                    '<td><button class="btn btn-sm btn-outline-primary py-0" onclick="openADAddUser(\''+u.username+'\')"><i class="bi bi-plus"></i> Add to Share</button></td></tr>';
+		    '<td><button class="btn btn-sm btn-outline-primary py-0" data-user="'+u.username+'" onclick="openADAddUser(this.dataset.user)"><i class="bi bi-plus"></i> Add to Share</button></td></tr>';
             }).join('');
         },function(e){ showAlert('Error: '+e.message,'danger'); });
     }
@@ -748,7 +748,7 @@ function makePermSection(title, color, users, shareName, permType, inputId) {
     var badges=users&&users.length
         ?users.map(function(u){
             return '<span class="badge bg-'+color+' '+(color==='warning'?'text-dark':'')+' me-1 mb-1">'+u+
-                ' <span style="cursor:pointer" onclick="quickRevoke(\''+shareName+'\',\''+permType+'\',\''+u+'\')">&times;</span></span>';
+		' <span style="cursor:pointer" data-share="'+shareName+'" data-type="'+permType+'" data-user="'+u+'" onclick="quickRevoke(this.dataset.share, this.dataset.type, this.dataset.user)">&times;</span></span>';
         }).join('')
         :'<small class="text-muted">None</small>';
     return '<div class="col-md-4"><div class="card h-100">'+
