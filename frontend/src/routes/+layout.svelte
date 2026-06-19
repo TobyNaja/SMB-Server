@@ -22,9 +22,26 @@
 	];
 
 	const isLoginPage = $derived($page.url.pathname === '/login');
+	const isSetupPage = $derived($page.url.pathname === '/setup');
+	const isPublicPage = $derived(isLoginPage || isSetupPage);
 
 	onMount(async () => {
-		if (isLoginPage) return;
+		// Check if first-run setup is needed
+		try {
+			const status = await fetch('/auth/status').then(r => r.json());
+			if (status.setup_required && !isSetupPage) {
+				goto('/setup');
+				return;
+			}
+			if (!status.setup_required && isSetupPage) {
+				goto('/login');
+				return;
+			}
+		} catch {
+			// network error — let the page handle it
+		}
+
+		if (isPublicPage) return;
 		if (!isAuthenticated()) {
 			goto('/login');
 			return;
@@ -58,7 +75,7 @@
 
 <Toast />
 
-{#if isLoginPage}
+{#if isPublicPage}
 	{@render children()}
 {:else}
 	<div class="flex h-screen bg-gray-100 dark:bg-gray-900">

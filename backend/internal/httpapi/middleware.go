@@ -11,8 +11,10 @@ import (
 // publicPrefixes are paths that skip JWT authentication.
 var publicPrefixes = []string{
 	"/login",
+	"/setup",
 	"/health",
 	"/auth/login",
+	"/auth/setup",
 	"/docs",
 	"/openapi.json",
 }

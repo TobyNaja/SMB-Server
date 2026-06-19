@@ -1,6 +1,6 @@
 # Git ignore file for SMB-Server project
 .claude/
-.CLAUDE.md
+CLAUDE.md
 
 # Sensitive
 .env
