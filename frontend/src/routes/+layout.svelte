@@ -9,7 +9,7 @@
 	import { getUser, setAuth, clearAuth, isAuthenticated } from '$lib/stores/auth.svelte';
 	import {
 		Server, LayoutDashboard, Folder, User, Users, Building2,
-		Shield, ClipboardList, Settings, LogOut, Menu, Sun, Moon, X
+		Shield, ClipboardList, Settings, LogOut, Menu, X
 	} from 'lucide-svelte';
 
 	let { children } = $props();
@@ -30,9 +30,8 @@
 	const isPublicPage = $derived(isLoginPage || isSetupPage);
 
 	let sidebarOpen = $state(true);
-	let darkMode    = $state(false);
 
-	// Session timeout: JWT is 24h — warn at 23h50m
+	// Session timeout: JWT is 24h — warn 10 min before expiry
 	let sessionWarning = $state(false);
 	let sessionTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -42,7 +41,7 @@
 		try {
 			const payload = JSON.parse(atob(token.split('.')[1]));
 			const expiresAt = payload.exp * 1000;
-			const warnAt = expiresAt - 10 * 60 * 1000; // 10 min before expiry
+			const warnAt = expiresAt - 10 * 60 * 1000;
 			const delay = warnAt - Date.now();
 			if (delay > 0) {
 				sessionTimer = setTimeout(() => { sessionWarning = true; }, delay);
@@ -51,9 +50,6 @@
 	}
 
 	onMount(async () => {
-		darkMode = localStorage.getItem('darkMode') === 'true';
-		applyDark();
-
 		try {
 			const status = await fetch('/auth/status').then(r => r.json());
 			if (status.setup_required && !isSetupPage) { goto('/setup'); return; }
@@ -73,16 +69,6 @@
 
 		return () => { if (sessionTimer) clearTimeout(sessionTimer); };
 	});
-
-	function applyDark() {
-		document.documentElement.classList.toggle('dark', darkMode);
-	}
-
-	function toggleDark() {
-		darkMode = !darkMode;
-		localStorage.setItem('darkMode', String(darkMode));
-		applyDark();
-	}
 
 	async function handleLogout() {
 		try { await authApi.logout(); } catch { /* ignore */ }
@@ -104,13 +90,13 @@
 {#if isPublicPage}
 	{@render children()}
 {:else}
-	<div class="flex h-screen overflow-hidden {darkMode ? 'dark' : ''}">
+	<div class="flex h-screen overflow-hidden">
 		<!-- Sidebar -->
 		<aside
 			class="flex flex-col border-r border-gcp-border bg-white transition-all duration-200
 				{sidebarOpen ? 'w-56' : 'w-14'} flex-none"
 		>
-			<!-- Sidebar header (dark nav-blue) -->
+			<!-- Sidebar header -->
 			<div class="flex items-center gap-2 bg-gcp-nav px-3 py-3.5 text-white">
 				<Server size={20} class="flex-none" />
 				{#if sidebarOpen}
@@ -181,25 +167,12 @@
 					{navItems.find(n => isActive(n.href))?.label ?? 'SMB Manager'}
 				</span>
 
-				<div class="ml-auto flex items-center gap-2">
-					<button
-						onclick={toggleDark}
-						class="rounded p-1.5 text-gcp-muted hover:bg-gcp-bg transition-colors"
-						aria-label="Toggle dark mode"
-					>
-						{#if darkMode}
-							<Sun size={16} />
-						{:else}
-							<Moon size={16} />
-						{/if}
-					</button>
-					{#if getUser()}
-						<div class="flex items-center gap-2 rounded border border-gcp-border px-2.5 py-1 text-xs text-gcp-dark">
-							<User size={12} />
-							{getUser()?.username}
-						</div>
-					{/if}
-				</div>
+				{#if getUser()}
+					<div class="ml-auto flex items-center gap-2 rounded border border-gcp-border px-2.5 py-1 text-xs text-gcp-dark">
+						<User size={12} />
+						{getUser()?.username}
+					</div>
+				{/if}
 			</header>
 
 			<!-- Session expiry warning -->
