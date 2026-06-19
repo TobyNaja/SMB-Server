@@ -69,7 +69,7 @@ func (s *Service) Domain() string { return s.cfg.Domain }
 func (s *Service) ldapsearch(base, scope, filter string, attrs []string) string {
 	attrsStr := strings.Join(attrs, " ")
 	cmd := fmt.Sprintf(
-		"ldapsearch -H ldap://%s:%d -D '%s' -w '%s' -b '%s' -s %s '%s' %s 2>&1",
+		"ldapsearch -z 0 -H ldap://%s:%d -D '%s' -w '%s' -b '%s' -s %s '%s' %s 2>&1",
 		s.cfg.Server, s.cfg.Port,
 		s.cfg.BindDN, s.cfg.BindPW,
 		base, scope, filter, attrsStr,

@@ -95,7 +95,7 @@
 		const adUsers = suggestADUsers.filter(u => {
 			const low = u.toLowerCase();
 			return !entered.has(low) && low.startsWith(tok);
-		}).slice(0, 8);
+		});
 
 		// Local groups shown as @groupname
 		const groups = suggestGroups.filter(g => {
