@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  --color-gcp-blue:       #1a73e8;
+  --color-gcp-blue-hover: #1557b0;
+  --color-gcp-blue-light: #e8f0fe;
+  --color-gcp-bg:         #f8f9fa;
+  --color-gcp-surface:    #ffffff;
+  --color-gcp-border:     #dadce0;
+  --color-gcp-dark:       #202124;
+  --color-gcp-muted:      #5f6368;
+  --color-gcp-nav:        #1c2b49;
+  --color-gcp-green:      #137333;
+  --color-gcp-red:        #c5221f;
+  --color-gcp-yellow:     #e37400;
+}
+
+@layer components {
+  .input-field {
+    @apply rounded border border-gcp-border bg-white px-3 py-2 text-sm text-gcp-dark
+           placeholder-gcp-muted focus:border-gcp-blue focus:outline-none focus:ring-1 focus:ring-gcp-blue;
+  }
+  .select-field {
+    @apply rounded border border-gcp-border bg-white px-3 py-2 text-sm text-gcp-dark
+           focus:border-gcp-blue focus:outline-none focus:ring-1 focus:ring-gcp-blue;
+  }
+  .badge {
+    @apply rounded px-2 py-0.5 text-xs font-medium;
+  }
+  .btn-primary {
+    @apply rounded bg-gcp-blue px-4 py-2 text-sm font-medium text-white
+           hover:bg-gcp-blue-hover disabled:opacity-60 transition-colors;
+  }
+  .btn-danger {
+    @apply rounded bg-gcp-red px-4 py-2 text-sm font-medium text-white
+           hover:opacity-90 disabled:opacity-60 transition-colors;
+  }
+  .btn-secondary {
+    @apply rounded border border-gcp-border bg-white px-4 py-2 text-sm font-medium
+           text-gcp-dark hover:bg-gcp-bg disabled:opacity-60 transition-colors;
+  }
+  .card {
+    @apply rounded border border-gcp-border bg-white;
+  }
+  .page-title {
+    @apply text-base font-medium text-gcp-dark;
+  }
+}
