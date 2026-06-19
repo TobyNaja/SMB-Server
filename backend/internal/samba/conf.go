@@ -120,6 +120,9 @@ func (p *SmbConfParser) save() error {
 		}
 		fmt.Fprintf(f, "[%s]\n", name)
 		for k, v := range data {
+			if v == "" && !userListFields[k] {
+				continue
+			}
 			fmt.Fprintf(f, "    %s = %s\n", k, v)
 		}
 		f.WriteString("\n")
