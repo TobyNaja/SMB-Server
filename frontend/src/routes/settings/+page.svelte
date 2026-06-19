@@ -29,7 +29,7 @@
 		loading = true;
 		try {
 			const r = await authApi.listAdmins();
-			admins = r.admins;
+			admins = r.admins ?? [];
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load admins');
 		} finally {

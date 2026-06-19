@@ -23,7 +23,6 @@
 	// Pagination
 	let page     = $state(1);
 	let pageSize = $state(15);
-	const paged  = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
 
 	// User→shares panel
 	let viewingUser = $state<string | null>(null);
@@ -32,8 +31,9 @@
 	let confirmOpen = $state(false);
 	let confirmUser = $state('');
 
+	$effect(() => { search; page = 1; });
+
 	const filtered = $derived.by(() => {
-		page = 1;
 		if (!search.trim()) return users;
 		const q = search.toLowerCase();
 		return users.filter(u =>
@@ -41,6 +41,8 @@
 			(u.fullname ?? '').toLowerCase().includes(q)
 		);
 	});
+
+	const paged = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
 
 	const userShares = $derived<{ share: Share; perms: string[] }[]>(
 		viewingUser
@@ -62,8 +64,8 @@
 		loading = true;
 		try {
 			const [ur, sr] = await Promise.all([usersApi.list(), sharesApi.list()]);
-			users  = ur.users;
-			shares = sr.shares;
+			users  = ur.users ?? [];
+			shares = sr.shares ?? [];
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load');
 		} finally {

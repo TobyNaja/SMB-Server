@@ -15,8 +15,9 @@
 	let page     = $state(1);
 	let pageSize = $state(20);
 
+	$effect(() => { search; page = 1; });
+
 	const filtered = $derived.by(() => {
-		page = 1;
 		if (!search.trim()) return groups;
 		return groups.filter(g => g.toLowerCase().includes(search.toLowerCase()));
 	});
@@ -27,7 +28,7 @@
 		loading = true;
 		try {
 			const r = await groupsApi.list();
-			groups = r.groups;
+			groups = r.groups ?? [];
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load groups');
 		} finally {

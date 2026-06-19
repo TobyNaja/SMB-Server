@@ -20,7 +20,7 @@
 		loading = true;
 		try {
 			const r = await builtinApi.list();
-			groups = r.groups;
+			groups = r.groups ?? [];
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load builtin groups');
 		} finally {

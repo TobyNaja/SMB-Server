@@ -22,7 +22,7 @@
 		page = 1;
 		try {
 			const r = await auditApi.getLogs(limit, filterAction || undefined, filterActor || undefined);
-			logs = r.logs;
+			logs = r.logs ?? [];
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load audit log');
 		} finally {
