@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { sharesApi, type Share, type PermissionType } from '$lib/api/shares';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
+	import { Folder, FolderOpen } from 'lucide-svelte';
 
 	let shares = $state<Share[]>([]);
 	let loading = $state(true);
@@ -159,7 +160,9 @@
 							: 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'}"
 					>
 						<div class="flex items-center justify-between">
-							<span class="font-medium">📁 {share.name}</span>
+							<span class="flex items-center gap-1.5 font-medium">
+								<Folder size={14} class="flex-none opacity-70" />{share.name}
+							</span>
 							<button
 								onclick={(e) => { e.stopPropagation(); deleteShare(share.name); }}
 								class="rounded px-1.5 py-0.5 text-xs opacity-60 hover:bg-red-600 hover:text-white hover:opacity-100"
@@ -177,7 +180,9 @@
 		{#if selected}
 			<div class="rounded-xl bg-white shadow-sm dark:bg-gray-800">
 				<div class="border-b border-gray-100 px-6 py-4 dark:border-gray-700">
-					<h2 class="font-semibold text-gray-800 dark:text-white">📁 {selected.name}</h2>
+					<h2 class="flex items-center gap-2 font-semibold text-gray-800 dark:text-white">
+						<FolderOpen size={18} class="text-blue-500 flex-none" />{selected.name}
+					</h2>
 					<p class="text-sm text-gray-500 dark:text-gray-400">{selected.path}</p>
 				</div>
 

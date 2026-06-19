@@ -7,18 +7,21 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { authApi } from '$lib/api/auth';
 	import { getUser, setAuth, clearAuth, isAuthenticated } from '$lib/stores/auth.svelte';
-	import { toastError } from '$lib/stores/toast.svelte';
+	import {
+		Server, Folder, User, Users, Building2,
+		Shield, ClipboardList, Settings, LogOut
+	} from 'lucide-svelte';
 
 	let { children } = $props();
 
 	const navItems = [
-		{ href: '/shares', label: 'Shares', icon: '📁' },
-		{ href: '/users', label: 'Users', icon: '👤' },
-		{ href: '/groups', label: 'Groups', icon: '👥' },
-		{ href: '/ad', label: 'Active Directory', icon: '🏢' },
-		{ href: '/builtin', label: 'Builtin Groups', icon: '🛡️' },
-		{ href: '/audit', label: 'Audit Log', icon: '📋' },
-		{ href: '/settings', label: 'Settings', icon: '⚙️' }
+		{ href: '/shares',  label: 'Shares',          icon: Folder        },
+		{ href: '/users',   label: 'Users',            icon: User          },
+		{ href: '/groups',  label: 'Groups',           icon: Users         },
+		{ href: '/ad',      label: 'Active Directory', icon: Building2     },
+		{ href: '/builtin', label: 'Builtin Groups',   icon: Shield        },
+		{ href: '/audit',   label: 'Audit Log',        icon: ClipboardList },
+		{ href: '/settings',label: 'Settings',         icon: Settings      }
 	];
 
 	const isLoginPage = $derived($page.url.pathname === '/login');
@@ -26,27 +29,14 @@
 	const isPublicPage = $derived(isLoginPage || isSetupPage);
 
 	onMount(async () => {
-		// Check if first-run setup is needed
 		try {
 			const status = await fetch('/auth/status').then(r => r.json());
-			if (status.setup_required && !isSetupPage) {
-				goto('/setup');
-				return;
-			}
-			if (!status.setup_required && isSetupPage) {
-				goto('/login');
-				return;
-			}
-		} catch {
-			// network error — let the page handle it
-		}
+			if (status.setup_required && !isSetupPage) { goto('/setup'); return; }
+			if (!status.setup_required && isSetupPage) { goto('/login'); return; }
+		} catch { /* network error — let the page handle it */ }
 
 		if (isPublicPage) return;
-		if (!isAuthenticated()) {
-			goto('/login');
-			return;
-		}
-		// Refresh current user info
+		if (!isAuthenticated()) { goto('/login'); return; }
 		try {
 			const me = await authApi.me();
 			setAuth(me, localStorage.getItem('access_token') ?? '');
@@ -57,14 +47,8 @@
 	});
 
 	async function handleLogout() {
-		try {
-			await authApi.logout();
-		} catch {
-			// ignore
-		} finally {
-			clearAuth();
-			goto('/login');
-		}
+		try { await authApi.logout(); } catch { /* ignore */ }
+		finally { clearAuth(); goto('/login'); }
 	}
 </script>
 
@@ -81,13 +65,14 @@
 	<div class="flex h-screen bg-gray-100 dark:bg-gray-900">
 		<!-- Sidebar -->
 		<aside class="flex w-56 flex-col bg-gray-800 text-white">
-			<div class="flex items-center gap-2 px-4 py-5 font-bold text-lg border-b border-gray-700">
-				<span>🗄️</span>
-				<span>SMB Manager</span>
+			<div class="flex items-center gap-2 border-b border-gray-700 px-4 py-5">
+				<Server size={20} class="text-blue-400 flex-none" />
+				<span class="text-lg font-bold">SMB Manager</span>
 			</div>
 
 			<nav class="flex-1 overflow-y-auto py-2">
 				{#each navItems as item}
+					{@const Icon = item.icon}
 					<a
 						href={item.href}
 						class="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
@@ -95,7 +80,7 @@
 							? 'bg-blue-600 text-white'
 							: 'text-gray-300 hover:bg-gray-700'}"
 					>
-						<span>{item.icon}</span>
+						<Icon size={16} class="flex-none" />
 						<span>{item.label}</span>
 					</a>
 				{/each}
@@ -103,14 +88,15 @@
 
 			<div class="border-t border-gray-700 p-4">
 				{#if getUser()}
-					<div class="mb-2 text-xs text-gray-400 truncate">
+					<div class="mb-2 truncate text-xs text-gray-400">
 						Logged in as <strong class="text-white">{getUser()?.username}</strong>
 					</div>
 				{/if}
 				<button
 					onclick={handleLogout}
-					class="w-full rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-red-600 hover:text-white transition-colors"
+					class="flex w-full items-center justify-center gap-2 rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-200 transition-colors hover:bg-red-600 hover:text-white"
 				>
+					<LogOut size={14} />
 					Logout
 				</button>
 			</div>

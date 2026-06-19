@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { usersApi, type User } from '$lib/api/users';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
+	import { UserRound } from 'lucide-svelte';
 
 	let users = $state<User[]>([]);
 	let loading = $state(true);
@@ -107,7 +108,11 @@
 				<tbody>
 					{#each users as u}
 						<tr class="border-b border-gray-50 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
-							<td class="px-6 py-3 font-medium text-gray-800 dark:text-white">👤 {u.username}</td>
+							<td class="px-6 py-3 font-medium text-gray-800 dark:text-white">
+								<span class="flex items-center gap-2">
+									<UserRound size={14} class="flex-none text-gray-400" />{u.username}
+								</span>
+							</td>
 							<td class="px-6 py-3 text-gray-500">{u.uid}</td>
 							<td class="px-6 py-3 text-gray-500">{u.fullname || '—'}</td>
 							<td class="px-6 py-3">

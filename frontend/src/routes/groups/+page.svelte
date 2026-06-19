@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { groupsApi } from '$lib/api/groups';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
+	import { Users } from 'lucide-svelte';
 
 	let groups = $state<string[]>([]);
 	let loading = $state(true);
@@ -83,7 +84,9 @@
 			<div class="divide-y divide-gray-50 dark:divide-gray-700">
 				{#each groups as g}
 					<div class="flex items-center justify-between px-6 py-3">
-						<span class="text-sm font-medium text-gray-800 dark:text-white">👥 {g}</span>
+						<span class="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
+						<Users size={14} class="flex-none text-gray-400" />{g}
+					</span>
 					</div>
 				{/each}
 			</div>

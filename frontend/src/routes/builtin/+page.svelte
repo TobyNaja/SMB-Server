@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { builtinApi, type BuiltinGroup } from '$lib/api/builtin';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
+	import { ShieldCheck, ChevronDown, ChevronRight, X } from 'lucide-svelte';
 
 	let groups = $state<BuiltinGroup[]>([]);
 	let loading = $state(true);
@@ -64,7 +65,7 @@
 						class="flex w-full items-center justify-between px-5 py-4 text-left"
 					>
 						<div class="flex items-center gap-3">
-							<span class="text-base">🔐</span>
+							<ShieldCheck size={18} class="flex-none text-blue-400" />
 							<div>
 								<div class="font-medium text-gray-800 dark:text-white">BUILTIN\{group.name}</div>
 								<div class="text-xs text-gray-400">{group.description}</div>
@@ -74,7 +75,11 @@
 							<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
 								{group.members.length} member{group.members.length !== 1 ? 's' : ''}
 							</span>
-							<span class="text-gray-400">{expanded === group.name ? '▾' : '▸'}</span>
+							{#if expanded === group.name}
+								<ChevronDown size={16} class="text-gray-400" />
+							{:else}
+								<ChevronRight size={16} class="text-gray-400" />
+							{/if}
 						</div>
 					</button>
 
@@ -88,7 +93,7 @@
 										<span class="flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
 											{m}
 											<button onclick={() => removeMember(group.name, m)}
-												class="ml-1 text-blue-400 hover:text-red-500">✕</button>
+												class="ml-1 text-blue-400 hover:text-red-500"><X size={10} /></button>
 										</span>
 									{/each}
 								</div>

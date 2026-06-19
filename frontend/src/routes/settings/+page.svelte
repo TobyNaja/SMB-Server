@@ -3,6 +3,7 @@
 	import { authApi, type AdminInfo } from '$lib/api/auth';
 	import { getUser } from '$lib/stores/auth.svelte';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
+	import { KeyRound } from 'lucide-svelte';
 
 	let admins = $state<AdminInfo[]>([]);
 	let loading = $state(true);
@@ -126,7 +127,7 @@
 					<div class="flex items-center justify-between px-4 py-3">
 						<div>
 							<div class="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
-								🔑 {admin.username}
+								<KeyRound size={14} class="flex-none text-gray-400" /> {admin.username}
 								{#if admin.username === currentUser?.username}
 									<span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">you</span>
 								{/if}

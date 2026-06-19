@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { post } from '$lib/api/client';
 	import { toastError } from '$lib/stores/toast.svelte';
+	import { Server } from 'lucide-svelte';
 
 	let username = $state('');
 	let password = $state('');
@@ -29,7 +30,11 @@
 <div class="flex min-h-screen items-center justify-center bg-gray-900">
 	<div class="w-full max-w-sm rounded-xl bg-gray-800 p-8 shadow-2xl">
 		<div class="mb-6 text-center">
-			<div class="mb-2 text-4xl">🗄️</div>
+			<div class="mb-3 flex justify-center">
+				<div class="rounded-xl bg-blue-600/20 p-3">
+					<Server size={32} class="text-blue-400" />
+				</div>
+			</div>
 			<h1 class="text-xl font-bold text-white">SMB Permission Manager</h1>
 			<p class="mt-1 text-sm text-gray-400">Create your admin account to get started</p>
 		</div>
