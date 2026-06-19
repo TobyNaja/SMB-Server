@@ -4,6 +4,7 @@
 	import { sharesApi, type Share, type PermissionType } from '$lib/api/shares';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
 	import { CheckCircle2, XCircle, Plus } from 'lucide-svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 
 	let status = $state<ADStatus | null>(null);
 	let users  = $state<ADUser[]>([]);
@@ -13,6 +14,14 @@
 	let tab = $state<'users' | 'groups'>('users');
 	let userQuery  = $state('');
 	let groupQuery = $state('');
+
+	// Pagination
+	const PAGE_SIZE = 20;
+	let userPage  = $state(1);
+	let groupPage = $state(1);
+
+	const pagedUsers  = $derived(users.slice((userPage - 1) * PAGE_SIZE, userPage * PAGE_SIZE));
+	const pagedGroups = $derived(groups.slice((groupPage - 1) * PAGE_SIZE, groupPage * PAGE_SIZE));
 
 	// Quick-add to share dialog
 	let qaOpen     = $state(false);
@@ -39,7 +48,8 @@
 		loading = true;
 		try {
 			const r = await adApi.searchUsers(userQuery);
-			users = r.users;
+			users = r.users ?? [];
+			userPage = 1;
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'AD search failed');
 		} finally {
@@ -51,7 +61,8 @@
 		loading = true;
 		try {
 			const r = await adApi.searchGroups(groupQuery);
-			groups = r.groups;
+			groups = r.groups ?? [];
+			groupPage = 1;
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'AD search failed');
 		} finally {
@@ -184,7 +195,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each users as u}
+						{#each pagedUsers as u}
 							<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
 								<td class="px-5 py-3 font-mono text-xs font-medium text-gcp-dark">{u.username}</td>
 								<td class="px-5 py-3 text-gcp-dark">{u.display_name}</td>
@@ -203,6 +214,16 @@
 						{/each}
 					</tbody>
 				</table>
+				{#if users.length > PAGE_SIZE}
+					<div class="border-t border-gcp-border px-5 py-2">
+						<Pagination
+							total={users.length}
+							page={userPage}
+							pageSize={PAGE_SIZE}
+							onPageChange={(p) => (userPage = p)}
+						/>
+					</div>
+				{/if}
 			</div>
 		{:else if userQuery}
 			<div class="text-sm text-gcp-muted">No users found</div>
@@ -228,7 +249,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each groups as g}
+						{#each pagedGroups as g}
 							<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
 								<td class="px-5 py-3 font-medium text-gcp-dark">{g.name}</td>
 								<td class="px-5 py-3 font-mono text-xs text-gcp-blue">{g.smb_name}</td>
@@ -244,6 +265,16 @@
 						{/each}
 					</tbody>
 				</table>
+				{#if groups.length > PAGE_SIZE}
+					<div class="border-t border-gcp-border px-5 py-2">
+						<Pagination
+							total={groups.length}
+							page={groupPage}
+							pageSize={PAGE_SIZE}
+							onPageChange={(p) => (groupPage = p)}
+						/>
+					</div>
+				{/if}
 			</div>
 		{:else if groupQuery}
 			<div class="text-sm text-gcp-muted">No groups found</div>
