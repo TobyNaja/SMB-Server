@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -56,7 +57,8 @@ func NewDockerExecutor(containerName string) Executor {
 }
 
 func (e *dockerExecutor) Execute(command string) ExecResult {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return ExecResult{Success: false, ExitCode: -1, Output: err.Error()}

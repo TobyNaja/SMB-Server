@@ -38,12 +38,13 @@
 	const userShares = $derived<{ share: Share; perms: string[] }[]>(
 		viewingUser
 			? shares.reduce<{ share: Share; perms: string[] }[]>((acc, s) => {
+				const u = viewingUser!;
 				const perms: string[] = [];
-				if (s.admin_users.includes(viewingUser!)) perms.push('Admin');
-				if (s.write_list.includes(viewingUser!)) perms.push('Write');
-				if (s.read_list.includes(viewingUser!)) perms.push('Read');
-				if (s.valid_users.includes(viewingUser!)) perms.push('Valid');
-				if (s.invalid_users.includes(viewingUser!)) perms.push('Blocked');
+				if ((s.admin_users   ?? []).includes(u)) perms.push('Admin');
+				if ((s.write_list    ?? []).includes(u)) perms.push('Write');
+				if ((s.read_list     ?? []).includes(u)) perms.push('Read');
+				if ((s.valid_users   ?? []).includes(u)) perms.push('Valid');
+				if ((s.invalid_users ?? []).includes(u)) perms.push('Blocked');
 				if (perms.length) acc.push({ share: s, perms });
 				return acc;
 			}, [])

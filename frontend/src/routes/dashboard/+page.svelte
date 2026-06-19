@@ -13,11 +13,15 @@
 
 	async function load() {
 		try {
-			[stats, samba, adStatus] = await Promise.all([
+			// allSettled: one slow/failing endpoint won't block the whole dashboard
+			const [statsRes, sambaRes, adRes] = await Promise.allSettled([
 				statsApi.get(),
 				statsApi.sambaStatus(),
 				adApi.status(),
 			]);
+			if (statsRes.status === 'fulfilled') stats = statsRes.value;
+			if (sambaRes.status === 'fulfilled') samba = sambaRes.value;
+			if (adRes.status   === 'fulfilled') adStatus = adRes.value;
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to load dashboard');
 		} finally {

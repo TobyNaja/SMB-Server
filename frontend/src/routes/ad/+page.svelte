@@ -30,11 +30,9 @@
 	];
 
 	onMount(async () => {
-		try {
-			[status, { shares }] = await Promise.all([adApi.status(), sharesApi.list()]);
-		} catch {
-			toastError('Failed to check AD status');
-		}
+		const [adRes, sharesRes] = await Promise.allSettled([adApi.status(), sharesApi.list()]);
+		if (adRes.status     === 'fulfilled') status = adRes.value;
+		if (sharesRes.status === 'fulfilled') shares = sharesRes.value.shares ?? [];
 	});
 
 	async function searchUsers() {

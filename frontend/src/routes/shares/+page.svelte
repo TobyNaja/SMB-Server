@@ -36,11 +36,14 @@
 
 	const filtered = $derived(
 		search.trim()
-			? shares.filter(s =>
-				s.name.toLowerCase().includes(search.toLowerCase()) ||
-				s.path.toLowerCase().includes(search.toLowerCase()) ||
-				s.comment.toLowerCase().includes(search.toLowerCase())
-			)
+			? shares.filter(s => {
+				const q = search.toLowerCase();
+				return (
+					s.name.toLowerCase().includes(q) ||
+					(s.path ?? '').toLowerCase().includes(q) ||
+					(s.comment ?? '').toLowerCase().includes(q)
+				);
+			})
 			: shares
 	);
 
@@ -121,7 +124,7 @@
 	}
 
 	function getUserList(share: Share, type: PermissionType): string[] {
-		const map: Record<PermissionType, string[]> = {
+		const map: Record<PermissionType, string[] | null | undefined> = {
 			valid_users:   share.valid_users,
 			write_list:    share.write_list,
 			read_list:     share.read_list,
