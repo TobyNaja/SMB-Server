@@ -18,7 +18,7 @@
 			const res = await authApi.login(username, password);
 			const me = await authApi.me();
 			setAuth(me, res.access_token);
-			goto('/shares');
+			goto('/dashboard');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Login failed';
 		} finally {

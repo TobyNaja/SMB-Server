@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { usersApi, type User } from '$lib/api/users';
+	import { sharesApi, type Share } from '$lib/api/shares';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
-	import { UserRound } from 'lucide-svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { UserRound, Search, X, Plus, Folder } from 'lucide-svelte';
 
-	let users = $state<User[]>([]);
+	let users   = $state<User[]>([]);
+	let shares  = $state<Share[]>([]);
 	let loading = $state(true);
 	let showCreate = $state(false);
+	let search  = $state('');
 
 	let newUsername = $state('');
 	let newPassword = $state('');
@@ -15,13 +19,45 @@
 	let passwordTarget = $state('');
 	let newPw = $state('');
 
+	// User→shares panel
+	let viewingUser = $state<string | null>(null);
+
+	// Confirm delete
+	let confirmOpen = $state(false);
+	let confirmUser = $state('');
+
+	const filtered = $derived(
+		search.trim()
+			? users.filter(u =>
+				u.username.toLowerCase().includes(search.toLowerCase()) ||
+				(u.fullname ?? '').toLowerCase().includes(search.toLowerCase())
+			)
+			: users
+	);
+
+	const userShares = $derived<{ share: Share; perms: string[] }[]>(
+		viewingUser
+			? shares.reduce<{ share: Share; perms: string[] }[]>((acc, s) => {
+				const perms: string[] = [];
+				if (s.admin_users.includes(viewingUser!)) perms.push('Admin');
+				if (s.write_list.includes(viewingUser!)) perms.push('Write');
+				if (s.read_list.includes(viewingUser!)) perms.push('Read');
+				if (s.valid_users.includes(viewingUser!)) perms.push('Valid');
+				if (s.invalid_users.includes(viewingUser!)) perms.push('Blocked');
+				if (perms.length) acc.push({ share: s, perms });
+				return acc;
+			}, [])
+			: []
+	);
+
 	async function load() {
 		loading = true;
 		try {
-			const r = await usersApi.list();
-			users = r.users;
+			const [ur, sr] = await Promise.all([usersApi.list(), sharesApi.list()]);
+			users  = ur.users;
+			shares = sr.shares;
 		} catch (e) {
-			toastError(e instanceof Error ? e.message : 'Failed to load users');
+			toastError(e instanceof Error ? e.message : 'Failed to load');
 		} finally {
 			loading = false;
 		}
@@ -38,11 +74,17 @@
 		}
 	}
 
-	async function deleteUser(username: string) {
-		if (!confirm(`Delete user '${username}'?`)) return;
+	function askDelete(username: string) {
+		confirmUser = username;
+		confirmOpen = true;
+	}
+
+	async function deleteUser() {
+		confirmOpen = false;
 		try {
-			await usersApi.delete(username);
-			toast(`User '${username}' deleted`);
+			await usersApi.delete(confirmUser);
+			toast(`User '${confirmUser}' deleted`);
+			if (viewingUser === confirmUser) viewingUser = null;
 			await load();
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to delete user');
@@ -63,88 +105,151 @@
 	onMount(load);
 </script>
 
+<ConfirmModal
+	open={confirmOpen}
+	title="Delete user"
+	message="Delete local Samba user '{confirmUser}'?"
+	confirmLabel="Delete"
+	danger={true}
+	onconfirm={deleteUser}
+	oncancel={() => (confirmOpen = false)}
+/>
+
 <div>
-	<div class="mb-6 flex items-center justify-between">
-		<h1 class="text-lg font-semibold text-gray-800 dark:text-white">Local Samba Users</h1>
+	<!-- Header + create -->
+	<div class="mb-4 flex items-center gap-3">
+		<h1 class="page-title flex-1">Local Samba Users</h1>
 		<button onclick={() => (showCreate = !showCreate)}
-			class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
-			+ New User
+			class="flex items-center gap-1 rounded border border-gcp-border bg-white px-3 py-1.5
+				text-xs text-gcp-dark hover:bg-gcp-bg transition-colors">
+			<Plus size={12} />New User
 		</button>
 	</div>
 
 	{#if showCreate}
-		<div class="mb-6 rounded-xl bg-white p-5 shadow-sm dark:bg-gray-800">
-			<h2 class="mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">Create User</h2>
-			<form onsubmit={(e) => { e.preventDefault(); createUser(); }} class="flex flex-wrap gap-3">
-				<input bind:value={newUsername} placeholder="Username" required class="input-field w-40" />
-				<input type="password" bind:value={newPassword} placeholder="Password" required class="input-field w-44" />
-				<input bind:value={newFullname} placeholder="Full name (optional)" class="input-field w-52" />
-				<button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-					Create
-				</button>
-				<button type="button" onclick={() => (showCreate = false)}
-					class="rounded bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300">
-					Cancel
-				</button>
+		<div class="card mb-4 p-4">
+			<h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gcp-muted">Create User</h2>
+			<form onsubmit={(e) => { e.preventDefault(); createUser(); }} class="flex flex-wrap gap-2">
+				<input bind:value={newUsername} placeholder="Username" required class="input-field w-36" />
+				<input type="password" bind:value={newPassword} placeholder="Password" required class="input-field w-40" />
+				<input bind:value={newFullname} placeholder="Full name (optional)" class="input-field w-48" />
+				<button type="submit" class="btn-primary text-xs py-1.5">Create</button>
+				<button type="button" onclick={() => (showCreate = false)} class="btn-secondary text-xs py-1.5">Cancel</button>
 			</form>
 		</div>
 	{/if}
 
-	<div class="rounded-xl bg-white shadow-sm dark:bg-gray-800">
-		{#if loading}
-			<div class="p-6 text-sm text-gray-400">Loading…</div>
-		{:else if users.length === 0}
-			<div class="p-6 text-sm text-gray-400">No users found</div>
-		{:else}
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="border-b border-gray-100 text-left text-xs font-medium uppercase text-gray-400 dark:border-gray-700">
-						<th class="px-6 py-3">Username</th>
-						<th class="px-6 py-3">UID</th>
-						<th class="px-6 py-3">Full Name</th>
-						<th class="px-6 py-3">Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each users as u}
-						<tr class="border-b border-gray-50 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
-							<td class="px-6 py-3 font-medium text-gray-800 dark:text-white">
-								<span class="flex items-center gap-2">
-									<UserRound size={14} class="flex-none text-gray-400" />{u.username}
-								</span>
-							</td>
-							<td class="px-6 py-3 text-gray-500">{u.uid}</td>
-							<td class="px-6 py-3 text-gray-500">{u.fullname || '—'}</td>
-							<td class="px-6 py-3">
-								<div class="flex items-center gap-2">
-									{#if passwordTarget === u.username}
-										<input type="password" bind:value={newPw} placeholder="New password"
-											class="input-field w-36" />
-										<button onclick={() => changePassword(u.username)}
-											class="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700">
-											Save
-										</button>
-										<button onclick={() => { passwordTarget = ''; newPw = ''; }}
-											class="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-300">
-											Cancel
-										</button>
-									{:else}
-										<button onclick={() => { passwordTarget = u.username; newPw = ''; }}
-											class="rounded bg-amber-500 px-2 py-1 text-xs text-white hover:bg-amber-600">
-											Password
-										</button>
-										<button onclick={() => deleteUser(u.username)}
-											class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700">
-											Delete
-										</button>
-									{/if}
-								</div>
-							</td>
+	<!-- Search -->
+	<div class="relative mb-3 max-w-sm">
+		<Search size={13} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gcp-muted" />
+		<input bind:value={search} placeholder="Search users…" class="input-field w-full pl-8 text-xs" />
+		{#if search}
+			<button onclick={() => (search = '')} class="absolute right-2 top-1/2 -translate-y-1/2 text-gcp-muted hover:text-gcp-dark">
+				<X size={12} />
+			</button>
+		{/if}
+	</div>
+
+	<div class="flex gap-5">
+		<!-- User table -->
+		<div class="min-w-0 flex-1 card overflow-hidden">
+			{#if loading}
+				<div class="p-5 text-sm text-gcp-muted">Loading…</div>
+			{:else if filtered.length === 0}
+				<div class="p-5 text-sm text-gcp-muted">{search ? 'No matches' : 'No users found'}</div>
+			{:else}
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-gcp-border text-left text-xs font-medium uppercase text-gcp-muted">
+							<th class="px-5 py-3">Username</th>
+							<th class="px-5 py-3">UID</th>
+							<th class="px-5 py-3">Full Name</th>
+							<th class="px-5 py-3">Actions</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each filtered as u}
+							<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
+								<td class="px-5 py-3">
+									<button
+										onclick={() => viewingUser = viewingUser === u.username ? null : u.username}
+										class="flex items-center gap-2 font-medium
+											{viewingUser === u.username ? 'text-gcp-blue' : 'text-gcp-dark'}"
+									>
+										<UserRound size={14} class="flex-none text-gcp-muted" />{u.username}
+									</button>
+								</td>
+								<td class="px-5 py-3 text-gcp-muted font-mono text-xs">{u.uid}</td>
+								<td class="px-5 py-3 text-gcp-muted">{u.fullname || '—'}</td>
+								<td class="px-5 py-3">
+									<div class="flex items-center gap-2">
+										{#if passwordTarget === u.username}
+											<input type="password" bind:value={newPw} placeholder="New password"
+												class="input-field w-32 text-xs" />
+											<button onclick={() => changePassword(u.username)}
+												class="rounded bg-gcp-green px-2 py-1 text-xs text-white hover:opacity-90">
+												Save
+											</button>
+											<button onclick={() => { passwordTarget = ''; newPw = ''; }}
+												class="btn-secondary text-xs px-2 py-1">Cancel</button>
+										{:else}
+											<button onclick={() => { passwordTarget = u.username; newPw = ''; }}
+												class="rounded border border-gcp-border px-2 py-1 text-xs text-gcp-dark
+													hover:bg-gcp-bg transition-colors">
+												Password
+											</button>
+											<button onclick={() => askDelete(u.username)}
+												class="rounded px-2 py-1 text-xs text-gcp-red hover:bg-red-50 transition-colors">
+												Delete
+											</button>
+										{/if}
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		</div>
+
+		<!-- User→shares panel -->
+		{#if viewingUser}
+			<div class="w-64 flex-none card p-4">
+				<div class="mb-3 flex items-center justify-between">
+					<h3 class="text-xs font-semibold uppercase tracking-wide text-gcp-muted">
+						Shares for {viewingUser}
+					</h3>
+					<button onclick={() => (viewingUser = null)} class="text-gcp-muted hover:text-gcp-dark">
+						<X size={14} />
+					</button>
+				</div>
+				{#if userShares.length === 0}
+					<p class="text-xs text-gcp-muted italic">Not in any share</p>
+				{:else}
+					<div class="space-y-2">
+						{#each userShares as { share, perms }}
+							<div class="rounded border border-gcp-border p-2.5">
+								<div class="flex items-center gap-1.5 text-xs font-medium text-gcp-dark mb-1.5">
+									<Folder size={12} class="flex-none text-gcp-blue" />
+									<a href="/shares" class="hover:underline">{share.name}</a>
+								</div>
+								<div class="flex flex-wrap gap-1">
+									{#each perms as p}
+										<span class="badge
+											{p === 'Admin' ? 'bg-purple-100 text-purple-800' :
+											 p === 'Write' ? 'bg-green-100 text-gcp-green' :
+											 p === 'Read' ? 'bg-gcp-blue-light text-gcp-blue' :
+											 p === 'Blocked' ? 'bg-red-100 text-gcp-red' :
+											 'bg-gray-100 text-gcp-muted'}">
+											{p}
+										</span>
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
 		{/if}
 	</div>
 </div>
-

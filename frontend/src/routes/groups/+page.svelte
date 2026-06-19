@@ -2,13 +2,20 @@
 	import { onMount } from 'svelte';
 	import { groupsApi } from '$lib/api/groups';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
-	import { Users } from 'lucide-svelte';
+	import { Users, Search, X, Plus } from 'lucide-svelte';
 
 	let groups = $state<string[]>([]);
 	let loading = $state(true);
 	let newGroup = $state('');
+	let search = $state('');
 	let addMemberGroup = $state('');
-	let addMemberUser = $state('');
+	let addMemberUser  = $state('');
+
+	const filtered = $derived(
+		search.trim()
+			? groups.filter(g => g.toLowerCase().includes(search.toLowerCase()))
+			: groups
+	);
 
 	async function load() {
 		loading = true;
@@ -49,48 +56,71 @@
 </script>
 
 <div>
-	<h1 class="mb-6 text-lg font-semibold text-gray-800 dark:text-white">Local Linux Groups</h1>
+	<h1 class="page-title mb-4">Local Linux Groups</h1>
 
-	<div class="mb-6 flex gap-3">
-		<form onsubmit={(e) => { e.preventDefault(); createGroup(); }} class="flex gap-2">
-			<input bind:value={newGroup} placeholder="New group name" required
-				class="input-field w-52" />
-			<button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-				Create Group
-			</button>
-		</form>
-	</div>
-
-	<div class="mb-6 rounded-xl bg-white p-5 shadow-sm dark:bg-gray-800">
-		<h2 class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Add User to Group</h2>
-		<form onsubmit={(e) => { e.preventDefault(); addMember(); }} class="flex flex-wrap gap-3">
-			<select bind:value={addMemberGroup} class="select-field w-48">
-				<option value="">Select group…</option>
-				{#each groups as g}<option value={g}>{g}</option>{/each}
-			</select>
-			<input bind:value={addMemberUser} placeholder="Username" required class="input-field w-44" />
-			<button type="submit" class="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
-				Add Member
-			</button>
-		</form>
-	</div>
-
-	<div class="rounded-xl bg-white shadow-sm dark:bg-gray-800">
-		{#if loading}
-			<div class="p-6 text-sm text-gray-400">Loading…</div>
-		{:else if groups.length === 0}
-			<div class="p-6 text-sm text-gray-400">No groups found</div>
-		{:else}
-			<div class="divide-y divide-gray-50 dark:divide-gray-700">
-				{#each groups as g}
-					<div class="flex items-center justify-between px-6 py-3">
-						<span class="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-white">
-						<Users size={14} class="flex-none text-gray-400" />{g}
-					</span>
-					</div>
-				{/each}
+	<!-- Create + add member forms -->
+	<div class="card mb-4 p-4">
+		<div class="flex flex-wrap gap-6">
+			<div>
+				<h2 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gcp-muted">New Group</h2>
+				<form onsubmit={(e) => { e.preventDefault(); createGroup(); }} class="flex gap-2">
+					<input bind:value={newGroup} placeholder="Group name" required class="input-field w-44" />
+					<button type="submit" class="btn-primary text-xs py-1.5">
+						<Plus size={12} class="inline mr-1" />Create
+					</button>
+				</form>
 			</div>
+			<div>
+				<h2 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gcp-muted">Add User to Group</h2>
+				<form onsubmit={(e) => { e.preventDefault(); addMember(); }} class="flex flex-wrap gap-2">
+					<select bind:value={addMemberGroup} class="select-field w-40">
+						<option value="">Select group…</option>
+						{#each groups as g}<option value={g}>{g}</option>{/each}
+					</select>
+					<input bind:value={addMemberUser} placeholder="Username" required class="input-field w-36" />
+					<button type="submit" class="rounded bg-gcp-green px-3 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-60 transition-colors">
+						Add Member
+					</button>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<!-- Search -->
+	<div class="relative mb-3 max-w-sm">
+		<Search size={13} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gcp-muted" />
+		<input bind:value={search} placeholder="Search groups…" class="input-field w-full pl-8 text-xs" />
+		{#if search}
+			<button onclick={() => (search = '')} class="absolute right-2 top-1/2 -translate-y-1/2 text-gcp-muted hover:text-gcp-dark">
+				<X size={12} />
+			</button>
+		{/if}
+	</div>
+
+	<div class="card overflow-hidden">
+		{#if loading}
+			<div class="p-5 text-sm text-gcp-muted">Loading…</div>
+		{:else if filtered.length === 0}
+			<div class="p-5 text-sm text-gcp-muted">{search ? 'No matches' : 'No groups found'}</div>
+		{:else}
+			<table class="w-full text-sm">
+				<thead>
+					<tr class="border-b border-gcp-border text-left text-xs font-medium uppercase text-gcp-muted">
+						<th class="px-5 py-3">Group Name</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each filtered as g}
+						<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
+							<td class="px-5 py-3">
+								<span class="flex items-center gap-2 font-medium text-gcp-dark">
+									<Users size={14} class="flex-none text-gcp-muted" />{g}
+								</span>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		{/if}
 	</div>
 </div>
-

@@ -2,13 +2,19 @@
 	import { onMount } from 'svelte';
 	import { builtinApi, type BuiltinGroup } from '$lib/api/builtin';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
-	import { ShieldCheck, ChevronDown, ChevronRight, X } from 'lucide-svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import { ShieldCheck, ChevronDown, ChevronRight, X, Plus } from 'lucide-svelte';
 
-	let groups = $state<BuiltinGroup[]>([]);
-	let loading = $state(true);
+	let groups   = $state<BuiltinGroup[]>([]);
+	let loading  = $state(true);
 	let expanded = $state<string | null>(null);
 	let newMember = $state('');
-	let addingTo = $state('');
+	let addingTo  = $state('');
+
+	// Remove confirm
+	let confirmOpen   = $state(false);
+	let confirmGroup  = $state('');
+	let confirmMember = $state('');
 
 	async function load() {
 		loading = true;
@@ -22,10 +28,17 @@
 		}
 	}
 
-	async function removeMember(groupName: string, member: string) {
+	function askRemove(groupName: string, member: string) {
+		confirmGroup  = groupName;
+		confirmMember = member;
+		confirmOpen   = true;
+	}
+
+	async function removeMember() {
+		confirmOpen = false;
 		try {
-			await builtinApi.removeMember(groupName, member);
-			toast(`Removed '${member}' from ${groupName}`);
+			await builtinApi.removeMember(confirmGroup, confirmMember);
+			toast(`Removed '${confirmMember}' from ${confirmGroup}`);
 			await load();
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to remove member');
@@ -38,7 +51,7 @@
 			await builtinApi.addMember(groupName, newMember.trim());
 			toast(`Added '${newMember}' to ${groupName}`);
 			newMember = '';
-			addingTo = '';
+			addingTo  = '';
 			await load();
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to add member');
@@ -48,52 +61,65 @@
 	onMount(load);
 </script>
 
+<ConfirmModal
+	open={confirmOpen}
+	title="Remove member"
+	message="Remove '{confirmMember}' from BUILTIN\{confirmGroup}?"
+	confirmLabel="Remove"
+	danger={true}
+	onconfirm={removeMember}
+	oncancel={() => (confirmOpen = false)}
+/>
+
 <div>
-	<h1 class="mb-2 text-lg font-semibold text-gray-800 dark:text-white">BUILTIN Groups</h1>
-	<p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
-		Windows BUILTIN\ group membership. Changes are synced to Samba via <code class="text-xs">net sam addmem/delmem</code>.
+	<h1 class="page-title mb-1">BUILTIN Groups</h1>
+	<p class="mb-5 text-xs text-gcp-muted">
+		Windows BUILTIN\ group membership — synced via <code>net sam addmem/delmem</code>.
 	</p>
 
 	{#if loading}
-		<div class="text-sm text-gray-400">Loading…</div>
+		<div class="text-sm text-gcp-muted">Loading…</div>
 	{:else}
-		<div class="space-y-3">
+		<div class="space-y-2">
 			{#each groups as group}
-				<div class="rounded-xl bg-white shadow-sm dark:bg-gray-800">
+				<div class="card overflow-hidden">
 					<button
 						onclick={() => (expanded = expanded === group.name ? null : group.name)}
-						class="flex w-full items-center justify-between px-5 py-4 text-left"
+						class="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-gcp-bg transition-colors"
 					>
 						<div class="flex items-center gap-3">
-							<ShieldCheck size={18} class="flex-none text-blue-400" />
+							<ShieldCheck size={16} class="flex-none text-gcp-blue" />
 							<div>
-								<div class="font-medium text-gray-800 dark:text-white">BUILTIN\{group.name}</div>
-								<div class="text-xs text-gray-400">{group.description}</div>
+								<div class="text-sm font-medium text-gcp-dark">BUILTIN\{group.name}</div>
+								<div class="text-xs text-gcp-muted">{group.description}</div>
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
-							<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+							<span class="badge bg-gcp-bg text-gcp-muted">
 								{group.members.length} member{group.members.length !== 1 ? 's' : ''}
 							</span>
 							{#if expanded === group.name}
-								<ChevronDown size={16} class="text-gray-400" />
+								<ChevronDown size={14} class="text-gcp-muted" />
 							{:else}
-								<ChevronRight size={16} class="text-gray-400" />
+								<ChevronRight size={14} class="text-gcp-muted" />
 							{/if}
 						</div>
 					</button>
 
 					{#if expanded === group.name}
-						<div class="border-t border-gray-100 px-5 pb-4 pt-3 dark:border-gray-700">
+						<div class="border-t border-gcp-border bg-gcp-bg px-5 pb-4 pt-3">
 							{#if group.members.length === 0}
-								<p class="mb-3 text-xs text-gray-400 italic">No members</p>
+								<p class="mb-3 text-xs text-gcp-muted italic">No members</p>
 							{:else}
-								<div class="mb-3 flex flex-wrap gap-2">
+								<div class="mb-3 flex flex-wrap gap-1.5">
 									{#each group.members as m}
-										<span class="flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+										<span class="flex items-center gap-1 rounded border border-gcp-border bg-white
+											px-2.5 py-1 text-xs text-gcp-dark">
 											{m}
-											<button onclick={() => removeMember(group.name, m)}
-												class="ml-1 text-blue-400 hover:text-red-500"><X size={10} /></button>
+											<button onclick={() => askRemove(group.name, m)}
+												class="ml-1 text-gcp-muted hover:text-gcp-red transition-colors">
+												<X size={10} />
+											</button>
 										</span>
 									{/each}
 								</div>
@@ -105,18 +131,17 @@
 									<input bind:value={newMember} placeholder="username or IT\user"
 										class="input-field flex-1 text-xs" />
 									<button type="submit"
-										class="rounded bg-green-600 px-3 py-1.5 text-xs text-white hover:bg-green-700">
+										class="rounded bg-gcp-green px-3 py-1.5 text-xs text-white hover:opacity-90">
 										Add
 									</button>
 									<button type="button" onclick={() => { addingTo = ''; newMember = ''; }}
-										class="rounded bg-gray-200 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300">
-										Cancel
-									</button>
+										class="btn-secondary text-xs px-3 py-1.5">Cancel</button>
 								</form>
 							{:else}
 								<button onclick={() => { addingTo = group.name; newMember = ''; }}
-									class="rounded bg-gray-100 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
-									+ Add member
+									class="flex items-center gap-1.5 rounded border border-gcp-border bg-white
+										px-3 py-1.5 text-xs text-gcp-dark hover:bg-gcp-bg transition-colors">
+									<Plus size={11} />Add member
 								</button>
 							{/if}
 						</div>
@@ -126,4 +151,3 @@
 		</div>
 	{/if}
 </div>
-
