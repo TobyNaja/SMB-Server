@@ -3,6 +3,8 @@
 	import { sharesApi, type Share, type PermissionType } from '$lib/api/shares';
 	import { usersApi } from '$lib/api/users';
 	import { groupsApi } from '$lib/api/groups';
+	import { adApi } from '$lib/api/ad';
+	import { builtinApi } from '$lib/api/builtin';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
@@ -26,9 +28,11 @@
 	let permType  = $state<PermissionType>('valid_users');
 
 	// Auto-suggest sources
-	let suggestUsers  = $state<string[]>([]);
-	let suggestGroups = $state<string[]>([]);
-	let suggestLoaded = $state(false);
+	let suggestUsers   = $state<string[]>([]);
+	let suggestGroups  = $state<string[]>([]);
+	let suggestADUsers = $state<string[]>([]);
+	let suggestBuiltin = $state<string[]>([]);
+	let suggestLoaded  = $state(false);
 
 	// Help modal
 	let showHelp = $state(false);
@@ -83,25 +87,39 @@
 		const tok = lastToken;
 		const entered = enteredValues;
 
-		const users = suggestUsers.filter(u => {
+		const localUsers = suggestUsers.filter(u => {
 			const low = u.toLowerCase();
-			return !entered.has(low) && (tok === '' || low.startsWith(tok));
+			return !entered.has(low) && low.startsWith(tok);
+		}).slice(0, 5);
+
+		const adUsers = suggestADUsers.filter(u => {
+			const low = u.toLowerCase();
+			return !entered.has(low) && low.startsWith(tok);
 		}).slice(0, 8);
 
-		// Groups shown as @groupname
+		// Local groups shown as @groupname
 		const groups = suggestGroups.filter(g => {
 			const low = g.toLowerCase();
 			const withAt = '@' + low;
-			return !entered.has(withAt) && (tok === '' || low.startsWith(tok.replace(/^@/, '')) || withAt.startsWith(tok));
-		}).slice(0, 6);
+			return !entered.has(withAt) && (low.startsWith(tok.replace(/^@/, '')) || withAt.startsWith(tok));
+		}).slice(0, 5);
 
-		return { users, groups, hasAny: users.length > 0 || groups.length > 0 };
+		// Builtin groups e.g. BUILTIN\Administrators
+		const builtin = suggestBuiltin.filter(b => {
+			const low = b.toLowerCase();
+			return !entered.has(low) && low.startsWith(tok);
+		}).slice(0, 4);
+
+		const hasAny = localUsers.length > 0 || adUsers.length > 0 || groups.length > 0 || builtin.length > 0;
+		return { localUsers, adUsers, groups, builtin, hasAny };
 	});
 
 	// Flat list for keyboard navigation
 	const suggestionList = $derived.by(() => [
-		...suggestions.users.map(u => ({ label: u, value: u, type: 'user' as const })),
+		...suggestions.localUsers.map(u => ({ label: u, value: u, type: 'user' as const })),
+		...suggestions.adUsers.map(u => ({ label: u, value: u, type: 'ad' as const })),
 		...suggestions.groups.map(g => ({ label: '@' + g, value: '@' + g, type: 'group' as const })),
+		...suggestions.builtin.map(b => ({ label: b, value: b, type: 'builtin' as const })),
 	]);
 
 	const showDropdown = $derived(isFocused && lastToken !== '' && suggestions.hasAny);
@@ -151,10 +169,17 @@
 	async function loadSuggestions() {
 		if (suggestLoaded) return;
 		try {
-			const [ur, gr] = await Promise.all([usersApi.list(), groupsApi.list()]);
-			suggestUsers  = (ur.users ?? []).map(u => u.username);
-			suggestGroups = gr.groups ?? [];
-			suggestLoaded = true;
+			const [ur, gr, ar, br] = await Promise.all([
+				usersApi.list(),
+				groupsApi.list(),
+				adApi.searchUsers(''),
+				builtinApi.list(),
+			]);
+			suggestUsers   = (ur.users ?? []).map(u => u.username);
+			suggestGroups  = gr.groups ?? [];
+			suggestADUsers = (ar.users ?? []).map(u => u.username);
+			suggestBuiltin = (br.groups ?? []).map(g => g.full_name);
+			suggestLoaded  = true;
 		} catch { /* suggestions are a nice-to-have */ }
 	}
 
@@ -514,14 +539,16 @@
 												type="button"
 												onmousedown={(e) => { e.preventDefault(); addSuggestion(item.value); selectedIdx = -1; }}
 												class="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors
-													{i === selectedIdx
-														? 'bg-gcp-blue text-white'
-														: item.type === 'group'
-															? 'text-purple-700 hover:bg-purple-50'
-															: 'text-gcp-dark hover:bg-gcp-bg'}"
+													{i === selectedIdx ? 'bg-gcp-blue text-white'
+													: item.type === 'ad'      ? 'text-gcp-blue   hover:bg-blue-50'
+													: item.type === 'group'   ? 'text-purple-700 hover:bg-purple-50'
+													: item.type === 'builtin' ? 'text-orange-600 hover:bg-orange-50'
+													:                           'text-gcp-dark   hover:bg-gcp-bg'}"
 											>
 												<span class="flex-1">{item.label}</span>
-												<span class="font-sans text-[10px] opacity-60">{item.type}</span>
+												<span class="font-sans text-[10px] opacity-50">
+													{item.type === 'ad' ? 'AD' : item.type === 'builtin' ? 'builtin' : item.type === 'group' ? 'group' : 'local'}
+												</span>
 											</button>
 										{/each}
 									</div>
