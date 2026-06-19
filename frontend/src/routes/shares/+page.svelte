@@ -3,6 +3,7 @@
 	import { sharesApi, type Share, type PermissionType } from '$lib/api/shares';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { Folder, FolderOpen, Plus, Search, X } from 'lucide-svelte';
 
 	let shares   = $state<Share[]>([]);
@@ -34,18 +35,21 @@
 		invalid_users: { label: 'Blocked',       dot: 'bg-gcp-red'      }
 	};
 
-	const filtered = $derived(
-		search.trim()
-			? shares.filter(s => {
-				const q = search.toLowerCase();
-				return (
-					s.name.toLowerCase().includes(q) ||
-					(s.path ?? '').toLowerCase().includes(q) ||
-					(s.comment ?? '').toLowerCase().includes(q)
-				);
-			})
-			: shares
-	);
+	let page    = $state(1);
+	const PAGE_SIZE = 15;
+
+	const filtered = $derived.by(() => {
+		page = 1;
+		if (!search.trim()) return shares;
+		const q = search.toLowerCase();
+		return shares.filter(s =>
+			s.name.toLowerCase().includes(q) ||
+			(s.path ?? '').toLowerCase().includes(q) ||
+			(s.comment ?? '').toLowerCase().includes(q)
+		);
+	});
+
+	const paged = $derived(filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
 
 	async function load() {
 		loading = true;
@@ -205,7 +209,7 @@
 			<div class="text-xs text-gcp-muted">{search ? 'No matches' : 'No shares found'}</div>
 		{:else}
 			<div class="space-y-0.5">
-				{#each filtered as share}
+				{#each paged as share}
 					<!-- svelte-ignore a11y_interactive_supports_focus -->
 					<div
 						role="button"
@@ -231,6 +235,14 @@
 					</div>
 				{/each}
 			</div>
+			{#if filtered.length > PAGE_SIZE}
+				<Pagination
+					total={filtered.length}
+					{page}
+					pageSize={PAGE_SIZE}
+					onPageChange={(p) => (page = p)}
+				/>
+			{/if}
 		{/if}
 	</div>
 

@@ -4,6 +4,7 @@
 	import { sharesApi, type Share } from '$lib/api/shares';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { UserRound, Search, X, Plus, Folder } from 'lucide-svelte';
 
 	let users   = $state<User[]>([]);
@@ -19,6 +20,11 @@
 	let passwordTarget = $state('');
 	let newPw = $state('');
 
+	// Pagination
+	let page     = $state(1);
+	let pageSize = $state(15);
+	const paged  = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
+
 	// User→shares panel
 	let viewingUser = $state<string | null>(null);
 
@@ -26,14 +32,15 @@
 	let confirmOpen = $state(false);
 	let confirmUser = $state('');
 
-	const filtered = $derived(
-		search.trim()
-			? users.filter(u =>
-				u.username.toLowerCase().includes(search.toLowerCase()) ||
-				(u.fullname ?? '').toLowerCase().includes(search.toLowerCase())
-			)
-			: users
-	);
+	const filtered = $derived.by(() => {
+		page = 1;
+		if (!search.trim()) return users;
+		const q = search.toLowerCase();
+		return users.filter(u =>
+			u.username.toLowerCase().includes(q) ||
+			(u.fullname ?? '').toLowerCase().includes(q)
+		);
+	});
 
 	const userShares = $derived<{ share: Share; perms: string[] }[]>(
 		viewingUser
@@ -169,7 +176,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filtered as u}
+						{#each paged as u}
 							<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
 								<td class="px-5 py-3">
 									<button
@@ -210,6 +217,18 @@
 						{/each}
 					</tbody>
 				</table>
+				{#if filtered.length > pageSize}
+					<div class="border-t border-gcp-border px-5 pb-3">
+						<Pagination
+							total={filtered.length}
+							{page}
+							{pageSize}
+							pageSizeOptions={[10, 15, 25, 50]}
+							onPageChange={(p) => (page = p)}
+							onPageSizeChange={(s) => { pageSize = s; page = 1; }}
+						/>
+					</div>
+				{/if}
 			{/if}
 		</div>
 

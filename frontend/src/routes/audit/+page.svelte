@@ -2,16 +2,24 @@
 	import { onMount } from 'svelte';
 	import { auditApi, type AuditEntry } from '$lib/api/audit';
 	import { toastError } from '$lib/stores/toast.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { Download, RefreshCw } from 'lucide-svelte';
 
-	let logs      = $state<AuditEntry[]>([]);
-	let loading   = $state(true);
-	let limit     = $state(100);
+	let logs         = $state<AuditEntry[]>([]);
+	let loading      = $state(true);
+	let limit        = $state(500);
 	let filterAction = $state('');
 	let filterActor  = $state('');
 
+	// Pagination
+	let page     = $state(1);
+	let pageSize = $state(25);
+
+	const paged = $derived(logs.slice((page - 1) * pageSize, page * pageSize));
+
 	async function load() {
 		loading = true;
+		page = 1;
 		try {
 			const r = await auditApi.getLogs(limit, filterAction || undefined, filterActor || undefined);
 			logs = r.logs;
@@ -35,13 +43,9 @@
 	function exportCSV() {
 		const header = ['Time', 'Action', 'Actor', 'Resource Type', 'Resource', 'Status', 'IP', 'Details'];
 		const rows = logs.map(e => [
-			e.timestamp,
-			e.action,
-			e.actor,
-			e.resource_type ?? '',
-			e.resource_name ?? '',
-			e.status,
-			e.client_ip ?? '',
+			e.timestamp, e.action, e.actor,
+			e.resource_type ?? '', e.resource_name ?? '',
+			e.status, e.client_ip ?? '',
 			e.details ? JSON.stringify(e.details) : '',
 		]);
 		const csv = [header, ...rows]
@@ -50,7 +54,7 @@
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 		const url  = URL.createObjectURL(blob);
 		const a    = document.createElement('a');
-		a.href     = url;
+		a.href = url;
 		a.download = `audit_${new Date().toISOString().slice(0, 10)}.csv`;
 		a.click();
 		URL.revokeObjectURL(url);
@@ -66,10 +70,9 @@
 		<input bind:value={filterAction} placeholder="Filter action…" class="input-field w-40 text-xs" />
 		<input bind:value={filterActor}  placeholder="Filter actor…"  class="input-field w-32 text-xs" />
 		<select bind:value={limit} class="select-field w-28 text-xs">
-			<option value={50}>Last 50</option>
-			<option value={100}>Last 100</option>
-			<option value={500}>Last 500</option>
-			<option value={1000}>Last 1000</option>
+			<option value={100}>Load 100</option>
+			<option value={250}>Load 250</option>
+			<option value={500}>Load 500</option>
 		</select>
 		<button onclick={load}
 			class="flex items-center gap-1.5 rounded border border-gcp-border bg-white px-3 py-2
@@ -102,7 +105,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each logs as entry}
+					{#each paged as entry}
 						{@const detailStr = entry.details && Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ''}
 						<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
 							<td class="whitespace-nowrap px-4 py-2.5 text-gcp-muted">{formatTime(entry.timestamp)}</td>
@@ -120,13 +123,23 @@
 							<td class="px-4 py-2.5">
 								<span class="badge {statusColor(entry.status)}">{entry.status}</span>
 							</td>
-							<td class="max-w-xs truncate px-4 py-2.5 text-gcp-muted font-mono" title={detailStr}>{detailStr || '—'}</td>
+							<td class="max-w-xs truncate px-4 py-2.5 font-mono text-gcp-muted" title={detailStr}>{detailStr || '—'}</td>
 							<td class="px-4 py-2.5 font-mono text-gcp-muted">{entry.client_ip || '—'}</td>
 						</tr>
 					{/each}
 				</tbody>
 			</table>
+
+			<div class="border-t border-gcp-border px-4 pb-3">
+				<Pagination
+					total={logs.length}
+					{page}
+					{pageSize}
+					pageSizeOptions={[10, 25, 50, 100]}
+					onPageChange={(p) => (page = p)}
+					onPageSizeChange={(s) => { pageSize = s; page = 1; }}
+				/>
+			</div>
 		</div>
-		<p class="mt-2 text-right text-xs text-gcp-muted">{logs.length} entries</p>
 	{/if}
 </div>

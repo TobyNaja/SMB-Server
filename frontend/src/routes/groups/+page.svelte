@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { groupsApi } from '$lib/api/groups';
 	import { toast, toastError } from '$lib/stores/toast.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
 	import { Users, Search, X, Plus } from 'lucide-svelte';
 
 	let groups = $state<string[]>([]);
@@ -11,11 +12,16 @@
 	let addMemberGroup = $state('');
 	let addMemberUser  = $state('');
 
-	const filtered = $derived(
-		search.trim()
-			? groups.filter(g => g.toLowerCase().includes(search.toLowerCase()))
-			: groups
-	);
+	let page     = $state(1);
+	let pageSize = $state(20);
+
+	const filtered = $derived.by(() => {
+		page = 1;
+		if (!search.trim()) return groups;
+		return groups.filter(g => g.toLowerCase().includes(search.toLowerCase()));
+	});
+
+	const paged = $derived(filtered.slice((page - 1) * pageSize, page * pageSize));
 
 	async function load() {
 		loading = true;
@@ -110,7 +116,7 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each filtered as g}
+					{#each paged as g}
 						<tr class="border-b border-gcp-border/50 hover:bg-gcp-bg">
 							<td class="px-5 py-3">
 								<span class="flex items-center gap-2 font-medium text-gcp-dark">
@@ -121,6 +127,18 @@
 					{/each}
 				</tbody>
 			</table>
+			{#if filtered.length > pageSize}
+				<div class="border-t border-gcp-border px-5 pb-3">
+					<Pagination
+						total={filtered.length}
+						{page}
+						{pageSize}
+						pageSizeOptions={[10, 20, 50]}
+						onPageChange={(p) => (page = p)}
+						onPageSizeChange={(s) => { pageSize = s; page = 1; }}
+					/>
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>
