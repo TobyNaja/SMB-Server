@@ -36,4 +36,5 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, authSvc *auth.Service, exec
 	builtinPath := cfg.AuditLogPath[:strings.LastIndex(cfg.AuditLogPath, "/")+1] + "builtin_groups.json"
 	registerBuiltinRoutes(api.Group("/builtin"), exec, builtinPath)
 	registerAuditRoutes(api.Group("/audit"), auditSvc)
+	registerStatsRoutes(api, exec, cfg.SambaConfigPath, auditSvc)
 }
