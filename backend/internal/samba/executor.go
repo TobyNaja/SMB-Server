@@ -143,7 +143,7 @@ func (e *dockerExecutor) RemoveUserFromGroup(username, groupName string) ExecRes
 
 func (e *dockerExecutor) GetUsers() []UserInfo {
 	result := e.Execute("pdbedit -L 2>/dev/null")
-	var users []UserInfo
+	users := make([]UserInfo, 0)
 	if !result.Success {
 		return users
 	}
@@ -184,7 +184,7 @@ var skipGroups = map[string]bool{
 
 func (e *dockerExecutor) GetGroups() []string {
 	result := e.Execute("getent group")
-	var groups []string
+	groups := make([]string, 0)
 	if !result.Success {
 		return groups
 	}

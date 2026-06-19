@@ -113,7 +113,7 @@ func (s *Service) SearchUsers(query, ou string, limit int) ([]UserResult, error)
 	})
 
 	entries := ParseLDIF(output)
-	var users []UserResult
+	users := make([]UserResult, 0)
 	short := domainShort(s.cfg.Domain)
 
 	for _, e := range entries {
@@ -173,7 +173,7 @@ func (s *Service) SearchGroups(query string, limit int) ([]GroupResult, error) {
 	)
 
 	entries := ParseLDIF(output)
-	var groups []GroupResult
+	groups := make([]GroupResult, 0)
 
 	for _, e := range entries {
 		cn := GetString(e, "cn")
