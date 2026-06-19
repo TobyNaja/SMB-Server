@@ -30,9 +30,12 @@
 	// Auto-suggest sources
 	let suggestUsers   = $state<string[]>([]);
 	let suggestGroups  = $state<string[]>([]);
-	let suggestADUsers = $state<string[]>([]);
 	let suggestBuiltin = $state<string[]>([]);
 	let suggestLoaded  = $state(false);
+
+	// AD live search (fires per keystroke with debounce, avoids LDAP MaxPageSize issues)
+	let adSearchResults = $state<string[]>([]);
+	let adSearchLoading = $state(false);
 
 	// Help modal
 	let showHelp = $state(false);
@@ -83,6 +86,30 @@
 		new Set(permInput.split(/[\s,]+/).map(s => s.trim().toLowerCase()).filter(Boolean))
 	);
 
+	// Live AD search: fires when lastToken changes (min 2 chars), debounced 300ms
+	$effect(() => {
+		const tok = lastToken;
+		// strip domain prefix for the actual search term
+		const term = tok.includes('\\') ? tok.split('\\')[1] : tok;
+		if (term.length < 2) {
+			adSearchResults = [];
+			adSearchLoading = false;
+			return;
+		}
+		adSearchLoading = true;
+		const timer = setTimeout(async () => {
+			try {
+				const r = await adApi.searchUsers(term);
+				adSearchResults = (r.users ?? []).map(u => u.username);
+			} catch {
+				adSearchResults = [];
+			} finally {
+				adSearchLoading = false;
+			}
+		}, 300);
+		return () => clearTimeout(timer);
+	});
+
 	const suggestions = $derived.by(() => {
 		const tok = lastToken;
 		const entered = enteredValues;
@@ -92,12 +119,12 @@
 			return !entered.has(low) && low.startsWith(tok);
 		}).slice(0, 5);
 
-		const adUsers = suggestADUsers.filter(u => {
+		// AD results come from live search; filter client-side to confirm prefix match
+		const adUsers = adSearchResults.filter(u => {
 			const low = u.toLowerCase();
-			// match "IT\carol" by full prefix ("it\c") OR by username-only ("car")
 			const afterSlash = low.includes('\\') ? low.split('\\')[1] : low;
 			return !entered.has(low) && (low.startsWith(tok) || afterSlash.startsWith(tok));
-		});
+		}).slice(0, 10);
 
 		// Local groups shown as @groupname
 		const groups = suggestGroups.filter(g => {
@@ -124,7 +151,7 @@
 		...suggestions.builtin.map(b => ({ label: b, value: b, type: 'builtin' as const })),
 	]);
 
-	const showDropdown = $derived(isFocused && lastToken !== '' && suggestions.hasAny);
+	const showDropdown = $derived(isFocused && lastToken !== '' && (suggestions.hasAny || adSearchLoading));
 
 	// Reset selection when suggestion list changes
 	$effect(() => { suggestionList; selectedIdx = -1; });
@@ -171,15 +198,13 @@
 	async function loadSuggestions() {
 		if (suggestLoaded) return;
 		try {
-			const [ur, gr, ar, br] = await Promise.all([
+			const [ur, gr, br] = await Promise.all([
 				usersApi.list(),
 				groupsApi.list(),
-				adApi.searchUsers(''),
 				builtinApi.list(),
 			]);
 			suggestUsers   = (ur.users ?? []).map(u => u.username);
 			suggestGroups  = gr.groups ?? [];
-			suggestADUsers = (ar.users ?? []).map(u => u.username);
 			suggestBuiltin = (br.groups ?? []).map(g => g.full_name);
 			suggestLoaded  = true;
 		} catch { /* suggestions are a nice-to-have */ }
@@ -307,7 +332,7 @@
 				<section>
 					<h3 class="mb-2 font-semibold uppercase tracking-wide text-gcp-muted">Permission Lists</h3>
 					<div class="space-y-2">
-						{#each Object.entries(permLabels) as [type, meta]}
+						{#each Object.entries(permLabels) as [type, meta] (type)}
 							<div class="flex gap-3 rounded border border-gcp-border p-3">
 								<span class="mt-0.5 h-2 w-2 flex-none rounded-full {meta.dot}"></span>
 								<div>
@@ -340,7 +365,7 @@
 							{ ex: 'IT\\username',    desc: 'Active Directory user (domain\\user)' },
 							{ ex: '@groupname',      desc: 'Local Linux group' },
 							{ ex: '@"Group Name"',   desc: 'AD group with spaces' },
-						] as row}
+						] as row (row.ex)}
 							<div class="flex items-baseline gap-3 rounded bg-gcp-bg px-3 py-2">
 								<code class="w-36 flex-none font-mono text-gcp-dark">{row.ex}</code>
 								<span class="text-gcp-muted">{row.desc}</span>
@@ -405,7 +430,7 @@
 			<div class="text-xs text-gcp-muted">{search ? 'No matches' : 'No shares found'}</div>
 		{:else}
 			<div class="space-y-0.5">
-				{#each paged as share}
+				{#each paged as share (share.name)}
 					<!-- svelte-ignore a11y_interactive_supports_focus -->
 					<div
 						role="button"
@@ -478,7 +503,7 @@
 
 					<!-- Permission list display -->
 					<div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{#each Object.entries(permLabels) as [type, meta]}
+						{#each Object.entries(permLabels) as [type, meta] (type)}
 							{@const users = getUserList(selected, type as PermissionType)}
 							<div class="rounded border border-gcp-border p-3">
 								<div class="mb-2 flex items-center gap-1.5">
@@ -490,7 +515,7 @@
 									<p class="text-xs italic text-gcp-muted">—</p>
 								{:else}
 									<div class="flex flex-wrap gap-1">
-										{#each users as u}
+										{#each users as u (u)}
 											<span class="rounded bg-gcp-bg px-1.5 py-0.5 font-mono text-xs text-gcp-dark">{u}</span>
 										{/each}
 									</div>
@@ -517,7 +542,7 @@
 						<div class="space-y-3">
 							<!-- Type selector -->
 							<select bind:value={permType} class="select-field w-44">
-								{#each Object.entries(permLabels) as [type, meta]}
+								{#each Object.entries(permLabels) as [type, meta] (type)}
 									<option value={type}>{meta.label}</option>
 								{/each}
 							</select>
@@ -538,9 +563,9 @@
 									<div
 										bind:this={dropdownEl}
 										class="absolute left-0 top-full z-20 mt-0.5 w-full overflow-y-auto rounded border border-gcp-border bg-white shadow-lg"
-										style="max-height: 192px"
+										style="max-height: 220px"
 									>
-										{#each suggestionList as item, i}
+										{#each suggestionList as item, i (item.value + i)}
 											<button
 												type="button"
 												onmousedown={(e) => { e.preventDefault(); addSuggestion(item.value); selectedIdx = -1; }}
@@ -557,6 +582,9 @@
 												</span>
 											</button>
 										{/each}
+										{#if adSearchLoading}
+											<div class="px-3 py-1.5 font-sans text-xs text-gcp-muted italic">Searching AD…</div>
+										{/if}
 									</div>
 								{/if}
 							</div>
