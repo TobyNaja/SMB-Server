@@ -104,7 +104,7 @@
 		...suggestions.groups.map(g => ({ label: '@' + g, value: '@' + g, type: 'group' as const })),
 	]);
 
-	const showDropdown = $derived(isFocused && suggestions.hasAny);
+	const showDropdown = $derived(isFocused && lastToken !== '' && suggestions.hasAny);
 
 	// Reset selection when suggestion list changes
 	$effect(() => { suggestionList; selectedIdx = -1; });
