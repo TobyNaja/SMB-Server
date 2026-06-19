@@ -31,15 +31,15 @@ open http://localhost:8080
 
 | Variable | Description | Default |
 |---|---|---|
-| `SECRET_KEY` | JWT signing key — **เปลี่ยนก่อน deploy** | `dev-secret-key-change-in-production` |
-| `LDAP_SERVER` | IP ของ AD/LDAP server | `10.70.37.143` |
-| `LDAP_PORT` | LDAP port | `389` |
-| `LDAP_BASE_DN` | Base DN | `DC=it,DC=kmitl,DC=ac,DC=th` |
-| `LDAP_BIND_DN` | Bind account UPN | `ldap-bind-nas@IT.KMITL.AC.TH` |
+| `SECRET_KEY` | JWT signing key — **เปลี่ยนก่อน deploy** | `xxxxxxxxxxxxxxxxxxxxxx` |
+| `LDAP_SERVER` | IP ของ AD/LDAP server | `xxx.xxx.xxx.xxx` |
+| `LDAP_PORT` | LDAP port | `xxxx` |
+| `LDAP_BASE_DN` | Base DN | `DC=xxx` |
+| `LDAP_BIND_DN` | Bind account UPN | `xxxxxxxxx@Xxxxxxxxx` |
 | `LDAP_BIND_PW` | Bind account password | *(empty)* |
-| `LDAP_DOMAIN` | AD domain name | `IT.KMITL.AC.TH` |
-| `TOKEN_EXPIRY_MINUTES` | JWT lifetime | `1440` (24 h) |
-| `SAMBA_CONTAINER` | ชื่อ Samba container | `samba-server` |
+| `LDAP_DOMAIN` | AD domain name | `xxxxxx` |
+| `TOKEN_EXPIRY_MINUTES` | JWT lifetime | `xxxx` (24 h) |
+| `SAMBA_CONTAINER` | ชื่อ Samba container | `xxxxxxxx` |
 
 ---
 
