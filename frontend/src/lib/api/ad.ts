@@ -36,16 +36,16 @@ export interface OU {
 export const adApi = {
 	status: () => get<ADStatus>('/api/ad/status'),
 
-	searchUsers: (q = '', ou = '', limit = 50) =>
+	searchUsers: (q = '', ou = '') =>
 		get<{ users: ADUser[]; count: number; domain: string }>(
-			`/api/ad/users?q=${encodeURIComponent(q)}&ou=${encodeURIComponent(ou)}&limit=${limit}`
+			`/api/ad/users?q=${encodeURIComponent(q)}&ou=${encodeURIComponent(ou)}`
 		),
 
 	getUser: (username: string) => get<ADUser>(`/api/ad/users/${encodeURIComponent(username)}`),
 
-	searchGroups: (q = '', limit = 50) =>
+	searchGroups: (q = '') =>
 		get<{ groups: ADGroup[]; count: number; domain: string }>(
-			`/api/ad/groups?q=${encodeURIComponent(q)}&limit=${limit}`
+			`/api/ad/groups?q=${encodeURIComponent(q)}`
 		),
 
 	listOUs: () => get<{ ous: OU[]; domain: string }>('/api/ad/ous')

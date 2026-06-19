@@ -131,7 +131,7 @@ func (s *Service) SearchUsers(query, ou string, limit int) ([]UserResult, error)
 			OU:          extractOU(dn),
 			Source:      "ad",
 		})
-		if len(users) >= limit {
+		if limit > 0 && len(users) >= limit {
 			break
 		}
 	}
@@ -192,7 +192,7 @@ func (s *Service) SearchGroups(query string, limit int) ([]GroupResult, error) {
 			SMBName:     "@" + cn,
 			Source:      "ad",
 		})
-		if len(groups) >= limit {
+		if limit > 0 && len(groups) >= limit {
 			break
 		}
 	}

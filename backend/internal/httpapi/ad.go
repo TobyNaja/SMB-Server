@@ -28,10 +28,7 @@ func (h *adHandlers) status(c *fiber.Ctx) error {
 func (h *adHandlers) searchUsers(c *fiber.Ctx) error {
 	q := c.Query("q")
 	ou := c.Query("ou")
-	limit := c.QueryInt("limit", 50)
-	if limit > 200 {
-		limit = 200
-	}
+	limit := c.QueryInt("limit", 0)
 	users, err := h.svc.SearchUsers(q, ou, limit)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"detail": err.Error()})
@@ -50,10 +47,7 @@ func (h *adHandlers) getUser(c *fiber.Ctx) error {
 
 func (h *adHandlers) searchGroups(c *fiber.Ctx) error {
 	q := c.Query("q")
-	limit := c.QueryInt("limit", 50)
-	if limit > 200 {
-		limit = 200
-	}
+	limit := c.QueryInt("limit", 0)
 	groups, err := h.svc.SearchGroups(q, limit)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"detail": err.Error()})
