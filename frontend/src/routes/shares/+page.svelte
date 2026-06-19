@@ -94,7 +94,9 @@
 
 		const adUsers = suggestADUsers.filter(u => {
 			const low = u.toLowerCase();
-			return !entered.has(low) && low.startsWith(tok);
+			// match "IT\carol" by full prefix ("it\c") OR by username-only ("car")
+			const afterSlash = low.includes('\\') ? low.split('\\')[1] : low;
+			return !entered.has(low) && (low.startsWith(tok) || afterSlash.startsWith(tok));
 		});
 
 		// Local groups shown as @groupname
@@ -186,10 +188,14 @@
 	function addSuggestion(value: string) {
 		const parts = permInput.trim().split(/[\s,]+/).filter(Boolean);
 		const tok = lastToken;
-		// Replace partial last token if it's a prefix of the suggestion
-		if (tok && value.toLowerCase().startsWith(tok.replace(/^@/, '')) && parts.length > 0) {
+		const valLow = value.toLowerCase();
+		const tokNoAt = tok.replace(/^@/, '');
+		// afterSlash lets "it670" match and replace a partial "IT\it670..." token
+		const afterSlash = valLow.includes('\\') ? valLow.split('\\')[1] : valLow;
+		const isPrefix = valLow.startsWith(tokNoAt) || afterSlash.startsWith(tokNoAt);
+		if (tok && isPrefix && parts.length > 0) {
 			parts[parts.length - 1] = value;
-		} else if (!parts.map(p => p.toLowerCase()).includes(value.toLowerCase())) {
+		} else if (!parts.map(p => p.toLowerCase()).includes(valLow)) {
 			parts.push(value);
 		}
 		permInput = parts.join(' ') + ' ';
