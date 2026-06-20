@@ -64,6 +64,7 @@ func AuthMiddleware(svc *auth.Service) fiber.Handler {
 		}
 
 		c.Locals("username", username)
+		c.Locals("token", token)
 		return c.Next()
 	}
 }

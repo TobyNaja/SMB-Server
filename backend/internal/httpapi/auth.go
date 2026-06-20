@@ -106,10 +106,16 @@ func (h *authHandlers) me(c *fiber.Ctx) error {
 	if username == "unknown" {
 		return c.Status(401).JSON(fiber.Map{"detail": "Not authenticated"})
 	}
+	expiresAt := time.Now().Add(24 * time.Hour)
+	if tok, ok := c.Locals("token").(string); ok && tok != "" {
+		if exp, err := h.svc.TokenExpiry(tok); err == nil {
+			expiresAt = exp
+		}
+	}
 	return c.JSON(fiber.Map{
 		"username":   username,
 		"is_admin":   true,
-		"expires_at": time.Now().UTC().Format(time.RFC3339),
+		"expires_at": expiresAt.UTC().Format(time.RFC3339),
 	})
 }
 
