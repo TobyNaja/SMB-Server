@@ -152,7 +152,6 @@
 				<span class="text-sm font-medium text-gcp-red">Disconnected</span>
 			{/if}
 			<span class="text-sm font-medium text-gcp-dark">{status.domain}</span>
-			<span class="text-xs text-gcp-muted">{status.ldap_server}</span>
 			{#if !status.connected && status.error}
 				<span class="ml-auto text-xs text-gcp-red">{status.error}</span>
 			{/if}

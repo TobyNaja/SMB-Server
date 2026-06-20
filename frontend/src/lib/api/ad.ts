@@ -19,10 +19,7 @@ export interface ADGroup {
 }
 
 export interface ADStatus {
-	ldap_server: string;
 	domain: string;
-	base_dn: string;
-	bind_dn: string;
 	connected: boolean;
 	error?: string;
 }
@@ -37,16 +34,16 @@ export const adApi = {
 	status: () => get<ADStatus>('/api/ad/status'),
 
 	searchUsers: (q = '', ou = '') =>
-		get<{ users: ADUser[]; count: number; domain: string }>(
+		get<{ users: ADUser[]; count: number }>(
 			`/api/ad/users?q=${encodeURIComponent(q)}&ou=${encodeURIComponent(ou)}`
 		),
 
 	getUser: (username: string) => get<ADUser>(`/api/ad/users/${encodeURIComponent(username)}`),
 
 	searchGroups: (q = '') =>
-		get<{ groups: ADGroup[]; count: number; domain: string }>(
+		get<{ groups: ADGroup[]; count: number }>(
 			`/api/ad/groups?q=${encodeURIComponent(q)}`
 		),
 
-	listOUs: () => get<{ ous: OU[]; domain: string }>('/api/ad/ous')
+	listOUs: () => get<{ ous: OU[] }>('/api/ad/ous')
 };
