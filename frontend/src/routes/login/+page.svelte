@@ -14,9 +14,9 @@
 		loading = true;
 		error = '';
 		try {
-			const res = await authApi.login(username, password);
-			const me  = await authApi.me();
-			setAuth(me, res.access_token);
+			await authApi.login(username, password);
+			const me = await authApi.me();
+			setAuth(me);
 			goto('/dashboard');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Login failed';

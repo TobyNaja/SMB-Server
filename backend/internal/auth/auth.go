@@ -66,6 +66,29 @@ func (s *Service) CreateToken(username string) (string, int64, error) {
 	return signed, int64(s.tokenExpiry.Seconds()), err
 }
 
+// TokenExpiry parses a JWT and returns its expiry time without re-validating the
+// full signature (only called after VerifyToken already succeeded in the middleware).
+func (s *Service) TokenExpiry(tokenStr string) (time.Time, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(s.secretKey), nil
+	}, jwt.WithValidMethods([]string{"HS256"}))
+	if err != nil || !token.Valid {
+		return time.Time{}, errors.New("invalid or expired token")
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return time.Time{}, errors.New("invalid claims")
+	}
+	exp, _ := claims["exp"].(float64)
+	if exp == 0 {
+		return time.Time{}, errors.New("missing exp claim")
+	}
+	return time.Unix(int64(exp), 0), nil
+}
+
 // VerifyToken parses and validates a JWT, returning the embedded username.
 func (s *Service) VerifyToken(tokenStr string) (string, error) {
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {

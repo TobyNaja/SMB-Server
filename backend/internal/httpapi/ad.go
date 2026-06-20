@@ -33,7 +33,7 @@ func (h *adHandlers) searchUsers(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"detail": err.Error()})
 	}
-	return c.JSON(fiber.Map{"users": users, "count": len(users), "domain": h.svc.Domain()})
+	return c.JSON(fiber.Map{"users": users, "count": len(users)})
 }
 
 func (h *adHandlers) getUser(c *fiber.Ctx) error {
@@ -52,10 +52,10 @@ func (h *adHandlers) searchGroups(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"detail": err.Error()})
 	}
-	return c.JSON(fiber.Map{"groups": groups, "count": len(groups), "domain": h.svc.Domain()})
+	return c.JSON(fiber.Map{"groups": groups, "count": len(groups)})
 }
 
 func (h *adHandlers) listOUs(c *fiber.Ctx) error {
 	ous := h.svc.ListOUs()
-	return c.JSON(fiber.Map{"ous": ous, "domain": h.svc.Domain()})
+	return c.JSON(fiber.Map{"ous": ous})
 }

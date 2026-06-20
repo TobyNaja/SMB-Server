@@ -2,11 +2,11 @@
 	import './layout.css';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import Toast from '$lib/components/Toast.svelte';
 	import { authApi } from '$lib/api/auth';
-	import { getUser, setAuth, clearAuth, isAuthenticated } from '$lib/stores/auth.svelte';
+	import { getUser, setAuth, clearAuth } from '$lib/stores/auth.svelte';
 	import {
 		Server, LayoutDashboard, Folder, User, Users, Building2,
 		Shield, ClipboardList, Settings, LogOut, Menu, X
@@ -35,18 +35,14 @@
 	let sessionWarning = $state(false);
 	let sessionTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function scheduleSessionWarning() {
-		const token = localStorage.getItem('access_token');
-		if (!token) return;
+	function scheduleSessionWarning(expiresAt: string) {
 		try {
-			const payload = JSON.parse(atob(token.split('.')[1]));
-			const expiresAt = payload.exp * 1000;
-			const warnAt = expiresAt - 10 * 60 * 1000;
+			const warnAt = new Date(expiresAt).getTime() - 10 * 60 * 1000;
 			const delay = warnAt - Date.now();
 			if (delay > 0) {
 				sessionTimer = setTimeout(() => { sessionWarning = true; }, delay);
 			}
-		} catch { /* malformed token — ignore */ }
+		} catch { /* ignore */ }
 	}
 
 	onMount(async () => {
@@ -57,18 +53,19 @@
 		} catch { /* network error — let the page handle it */ }
 
 		if (isPublicPage) return;
-		if (!isAuthenticated()) { goto('/login'); return; }
+
+		// Always verify session via cookie — no localStorage token needed.
 		try {
 			const me = await authApi.me();
-			setAuth(me, localStorage.getItem('access_token') ?? '');
-			scheduleSessionWarning();
+			setAuth(me);
+			scheduleSessionWarning(me.expires_at);
 		} catch {
 			clearAuth();
 			goto('/login');
 		}
-
-		return () => { if (sessionTimer) clearTimeout(sessionTimer); };
 	});
+
+	onDestroy(() => { if (sessionTimer) clearTimeout(sessionTimer); });
 
 	async function handleLogout() {
 		try { await authApi.logout(); } catch { /* ignore */ }

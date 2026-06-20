@@ -33,6 +33,7 @@ func main() {
 	app.Use(fiberlogger.New(fiberlogger.Config{
 		Format: "[${time}] ${status} - ${latency} ${method} ${path}\n",
 	}))
+	app.Use(httpapi.SecurityHeaders())
 
 	// Register API routes (must come before static serving)
 	httpapi.SetupRoutes(app, cfg, authSvc, exec, auditSvc)

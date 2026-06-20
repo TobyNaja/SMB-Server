@@ -32,6 +32,9 @@ type UserInfo struct {
 // Implementations: dockerExecutor (live), FakeExecutor (tests).
 type Executor interface {
 	Execute(command string) ExecResult
+	// ExecuteWithInput runs cmd directly (no shell wrapper) with input piped to stdin.
+	// Use for secrets that must never appear in a process argument list (ps aux).
+	ExecuteWithInput(cmd []string, input string) ExecResult
 	CreateUser(username, password string) ExecResult
 	DeleteUser(username string) ExecResult
 	SetPassword(username, password string) ExecResult
@@ -97,21 +100,65 @@ func (e *dockerExecutor) Execute(command string) ExecResult {
 	}
 }
 
+func (e *dockerExecutor) ExecuteWithInput(cmd []string, input string) ExecResult {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return ExecResult{Success: false, ExitCode: -1, Output: err.Error()}
+	}
+	defer cli.Close()
+
+	execCfg := types.ExecConfig{
+		Cmd:          cmd,
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		User:         "root",
+	}
+	resp, err := cli.ContainerExecCreate(ctx, e.containerName, execCfg)
+	if err != nil {
+		return ExecResult{Success: false, ExitCode: -1, Output: err.Error()}
+	}
+	attach, err := cli.ContainerExecAttach(ctx, resp.ID, types.ExecStartCheck{})
+	if err != nil {
+		return ExecResult{Success: false, ExitCode: -1, Output: err.Error()}
+	}
+	defer attach.Close()
+
+	// Write stdin in a goroutine so stdcopy can drain stdout concurrently.
+	go func() {
+		if input != "" {
+			attach.Conn.Write([]byte(input)) //nolint:errcheck
+		}
+		attach.CloseWrite() //nolint:errcheck
+	}()
+
+	var buf bytes.Buffer
+	if _, err := stdcopy.StdCopy(&buf, &buf, attach.Reader); err != nil {
+		return ExecResult{Success: false, ExitCode: -1, Output: err.Error()}
+	}
+	inspect, err := cli.ContainerExecInspect(ctx, resp.ID)
+	if err != nil {
+		return ExecResult{Success: false, ExitCode: -1, Output: err.Error()}
+	}
+	return ExecResult{
+		Success:  inspect.ExitCode == 0,
+		ExitCode: inspect.ExitCode,
+		Output:   buf.String(),
+	}
+}
+
 func (e *dockerExecutor) CreateUser(username, password string) ExecResult {
 	if !validUsername.MatchString(username) {
 		return ExecResult{Success: false, Output: "invalid username format"}
 	}
-	// Ensure system user exists
 	e.Execute(fmt.Sprintf(
 		"id %q > /dev/null 2>&1 || useradd -m -s /usr/sbin/nologin %q",
 		username, username,
 	))
-	// Set samba password
-	escaped := strings.ReplaceAll(password, "'", "'\\''")
-	return e.Execute(fmt.Sprintf(
-		"printf '%s\\n%s\\n' | smbpasswd -a -s %q",
-		escaped, escaped, username,
-	))
+	// Password sent via stdin — never appears in process argument list (ps aux).
+	return e.ExecuteWithInput([]string{"smbpasswd", "-a", "-s", username}, password+"\n"+password+"\n")
 }
 
 func (e *dockerExecutor) DeleteUser(username string) ExecResult {
@@ -121,11 +168,7 @@ func (e *dockerExecutor) DeleteUser(username string) ExecResult {
 }
 
 func (e *dockerExecutor) SetPassword(username, password string) ExecResult {
-	escaped := strings.ReplaceAll(password, "'", "'\\''")
-	return e.Execute(fmt.Sprintf(
-		"printf '%s\\n%s\\n' | smbpasswd -s %q",
-		escaped, escaped, username,
-	))
+	return e.ExecuteWithInput([]string{"smbpasswd", "-s", username}, password+"\n"+password+"\n")
 }
 
 func (e *dockerExecutor) CreateGroup(groupName string) ExecResult {
@@ -224,6 +267,11 @@ func (f *FakeExecutor) Execute(cmd string) ExecResult {
 	if r, ok := f.Results[cmd]; ok {
 		return r
 	}
+	return ExecResult{Success: true}
+}
+
+func (f *FakeExecutor) ExecuteWithInput(cmd []string, _ string) ExecResult {
+	f.Calls = append(f.Calls, "ExecuteWithInput:"+strings.Join(cmd, " "))
 	return ExecResult{Success: true}
 }
 

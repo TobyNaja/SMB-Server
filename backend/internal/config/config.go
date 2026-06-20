@@ -17,6 +17,7 @@ type Config struct {
 	TokenExpiryMinutes int
 	AuditLogPath       string
 	AdminCredsFile     string
+	CookieSecure       bool
 	LDAPServer         string
 	LDAPPort           int
 	LDAPBaseDN         string
@@ -37,12 +38,14 @@ func Load() *Config {
 		TokenExpiryMinutes: getEnvInt("TOKEN_EXPIRY_MINUTES", 1440),
 		AuditLogPath:       getEnv("AUDIT_LOG_PATH", "/mnt/shared/audit.json"),
 		AdminCredsFile:     getEnv("ADMIN_CREDS_FILE", "/mnt/shared/.admin"),
-		LDAPServer:         getEnv("LDAP_SERVER", "10.70.37.143"),
-		LDAPPort:           getEnvInt("LDAP_PORT", 389),
-		LDAPBaseDN:         getEnv("LDAP_BASE_DN", "DC=it,DC=kmitl,DC=ac,DC=th"),
-		LDAPBindDN:         getEnv("LDAP_BIND_DN", "ldap-bind-nas@IT.KMITL.AC.TH"),
-		LDAPBindPW:         getEnv("LDAP_BIND_PW", ""),
-		LDAPDomain:         getEnv("LDAP_DOMAIN", "IT.KMITL.AC.TH"),
+		CookieSecure:       getEnvBool("COOKIE_SECURE", false),
+		// LDAP defaults are empty — AD features require explicit env configuration.
+		LDAPServer: getEnv("LDAP_SERVER", ""),
+		LDAPPort:   getEnvInt("LDAP_PORT", 389),
+		LDAPBaseDN: getEnv("LDAP_BASE_DN", ""),
+		LDAPBindDN: getEnv("LDAP_BIND_DN", ""),
+		LDAPBindPW: getEnv("LDAP_BIND_PW", ""),
+		LDAPDomain: getEnv("LDAP_DOMAIN", ""),
 	}
 }
 
@@ -58,6 +61,17 @@ func getEnvInt(key string, fallback int) int {
 		if i, err := strconv.Atoi(v); err == nil {
 			return i
 		}
+	}
+	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	v := os.Getenv(key)
+	if v == "true" || v == "1" || v == "yes" {
+		return true
+	}
+	if v == "false" || v == "0" || v == "no" {
+		return false
 	}
 	return fallback
 }

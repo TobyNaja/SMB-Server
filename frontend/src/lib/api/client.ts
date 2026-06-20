@@ -1,16 +1,14 @@
 import { browser } from '$app/environment';
-import { clearAuth, getToken } from '$lib/stores/auth.svelte';
+import { clearAuth } from '$lib/stores/auth.svelte';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-	const token = getToken();
 	const headers: Record<string, string> = {
 		'Content-Type': 'application/json',
 		...(options.headers as Record<string, string>)
 	};
-	if (token) {
-		headers['Authorization'] = `Bearer ${token}`;
-	}
 
+	// Auth relies solely on the HttpOnly cookie (credentials: 'include').
+	// No Bearer token is sent from the browser — localStorage is not used.
 	const res = await fetch(path, { ...options, headers, credentials: 'include' });
 
 	if (res.status === 401) {
