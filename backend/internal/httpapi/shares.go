@@ -8,8 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// validSharePath allows absolute paths under /mnt or /srv with safe characters only.
-var validSharePath = regexp.MustCompile(`^/[a-zA-Z0-9/_-]+$`)
+// ValidSharePath allows absolute paths with safe characters only — no shell metacharacters.
+var ValidSharePath = regexp.MustCompile(`^/[a-zA-Z0-9/_-]+$`)
 
 type sharesHandlers struct {
 	exec       samba.Executor
@@ -87,7 +87,7 @@ func (h *sharesHandlers) create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"detail": "invalid request body"})
 	}
-	if !validSharePath.MatchString(req.Path) {
+	if !ValidSharePath.MatchString(req.Path) {
 		return c.Status(400).JSON(fiber.Map{"detail": "invalid path: must be absolute and contain only [a-zA-Z0-9/_-]"})
 	}
 	// mkdir + chmod in samba container (path is validated above — no injection risk)

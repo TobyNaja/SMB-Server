@@ -12,6 +12,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// SecurityHeaders returns a middleware that sets defensive HTTP security headers.
+func SecurityHeaders() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Set("X-Frame-Options", "DENY")
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("Referrer-Policy", "no-referrer")
+		c.Set("Content-Security-Policy",
+			"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'")
+		return c.Next()
+	}
+}
+
 // SetupRoutes registers all API routes. Static file serving is handled in main.go.
 func SetupRoutes(app *fiber.App, cfg *config.Config, authSvc *auth.Service, exec samba.Executor, auditSvc *audit.Service) {
 	app.Use(AuthMiddleware(authSvc))
