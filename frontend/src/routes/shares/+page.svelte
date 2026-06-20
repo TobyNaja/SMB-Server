@@ -261,17 +261,37 @@
 		}
 	}
 
+	// ✅ FIX: Merge existing users + new users ก่อน send
 	async function savePermissions() {
 		if (!selected) return;
-		const users = permInput.split(/[\s,]+/).map(u => u.trim()).filter(Boolean);
+		const newUsers = permInput.split(/[\s,]+/).map(u => u.trim()).filter(Boolean);
+		if (newUsers.length === 0) return;
+
+		const existingUsers = getUserList(selected, permType);
+		const merged = [...new Set([...existingUsers, ...newUsers])];
+
 		try {
-			await sharesApi.setPermissions(selected.name, permType, users);
+			await sharesApi.setPermissions(selected.name, permType, merged);
 			toast('Permissions updated');
 			permInput = '';
 			await selectShare(selected.name);
 			await load();
 		} catch (e) {
 			toastError(e instanceof Error ? e.message : 'Failed to update permissions');
+		}
+	}
+
+	// ✅ NEW: ลบ user ออกจาก permission list
+	async function removeFromPermission(type: PermissionType, userToRemove: string) {
+		if (!selected) return;
+		const updated = getUserList(selected, type).filter(u => u !== userToRemove);
+		try {
+			await sharesApi.setPermissions(selected.name, type, updated);
+			toast(`Removed ${userToRemove}`);
+			await selectShare(selected.name);
+			await load();
+		} catch (e) {
+			toastError(e instanceof Error ? e.message : 'Failed to remove user');
 		}
 	}
 
@@ -516,7 +536,17 @@
 								{:else}
 									<div class="flex flex-wrap gap-1">
 										{#each users as u (u)}
-											<span class="rounded bg-gcp-bg px-1.5 py-0.5 font-mono text-xs text-gcp-dark">{u}</span>
+											<!-- ✅ FIX: chip มีปุ่ม X ลบได้ -->
+											<span class="flex items-center gap-0.5 rounded bg-gcp-bg pl-1.5 pr-0.5 py-0.5 font-mono text-xs text-gcp-dark">
+												{u}
+												<button
+													onclick={() => removeFromPermission(type as PermissionType, u)}
+													class="ml-0.5 rounded p-0.5 text-gcp-muted hover:text-gcp-red hover:bg-red-50 transition-colors"
+													title="Remove {u}"
+												>
+													<X size={10} />
+												</button>
+											</span>
 										{/each}
 									</div>
 								{/if}
@@ -607,3 +637,4 @@
 		{/if}
 	</div>
 </div>
+
