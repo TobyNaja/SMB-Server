@@ -9,7 +9,8 @@ import (
 )
 
 type authHandlers struct {
-	svc *auth.Service
+	svc          *auth.Service
+	cookieSecure bool
 }
 
 type loginRequest struct {
@@ -27,8 +28,8 @@ type changePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
-func registerAuthRoutes(g fiber.Router, svc *auth.Service) {
-	h := &authHandlers{svc: svc}
+func registerAuthRoutes(g fiber.Router, svc *auth.Service, cookieSecure bool) {
+	h := &authHandlers{svc: svc, cookieSecure: cookieSecure}
 	g.Get("/status", h.status)   // public — tells client if first-run setup is needed
 	g.Post("/setup", h.setup)    // public — create first admin (blocked once one exists)
 	g.Post("/login", h.login)
@@ -83,6 +84,8 @@ func (h *authHandlers) login(c *fiber.Ctx) error {
 		Name:     "access_token",
 		Value:    token,
 		HTTPOnly: true,
+		Secure:   h.cookieSecure,
+		SameSite: "Strict",
 		Path:     "/",
 		MaxAge:   int(expiresIn),
 	})

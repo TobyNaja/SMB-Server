@@ -15,6 +15,17 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
+func securityHeaders() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Set("X-Frame-Options", "DENY")
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("Referrer-Policy", "no-referrer")
+		c.Set("Content-Security-Policy",
+			"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'")
+		return c.Next()
+	}
+}
+
 func main() {
 	cfg := config.Load()
 
@@ -33,6 +44,7 @@ func main() {
 	app.Use(fiberlogger.New(fiberlogger.Config{
 		Format: "[${time}] ${status} - ${latency} ${method} ${path}\n",
 	}))
+	app.Use(securityHeaders())
 
 	// Register API routes (must come before static serving)
 	httpapi.SetupRoutes(app, cfg, authSvc, exec, auditSvc)

@@ -18,7 +18,7 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, authSvc *auth.Service, exec
 
 	app.Get("/health", healthHandler)
 
-	registerAuthRoutes(app.Group("/auth"), authSvc)
+	registerAuthRoutes(app.Group("/auth"), authSvc, cfg.CookieSecure)
 
 	api := app.Group("/api")
 	registerUsersRoutes(api.Group("/users"), exec)

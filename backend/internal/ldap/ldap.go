@@ -45,13 +45,11 @@ type OUResult struct {
 }
 
 // ConnectionStatus is the /api/ad/status response shape.
+// Only safe fields are exposed — no server addresses or bind credentials.
 type ConnectionStatus struct {
-	LDAPServer string `json:"ldap_server"`
-	Domain     string `json:"domain"`
-	BaseDN     string `json:"base_dn"`
-	BindDN     string `json:"bind_dn"`
-	Connected  bool   `json:"connected"`
-	Error      string `json:"error,omitempty"`
+	Domain    string `json:"domain"`
+	Connected bool   `json:"connected"`
+	Error     string `json:"error,omitempty"`
 }
 
 // Service executes ldapsearch inside the samba container and parses the LDIF output.
@@ -66,13 +64,19 @@ func NewService(exec samba.Executor, cfg Config) *Service {
 
 func (s *Service) Domain() string { return s.cfg.Domain }
 
+// escapeSQ escapes single quotes for use inside a shell single-quoted string.
+func escapeSQ(s string) string {
+	return strings.ReplaceAll(s, "'", "'\\''")
+}
+
 func (s *Service) ldapsearch(base, scope, filter string, attrs []string) string {
 	attrsStr := strings.Join(attrs, " ")
+	// Write the bind password to a mktemp file so it never appears in `ps aux`.
+	// printf is a shell builtin — does not spawn a process visible in the process table.
 	cmd := fmt.Sprintf(
-		"ldapsearch -z 0 -H ldap://%s:%d -D '%s' -w '%s' -b '%s' -s %s '%s' %s 2>&1",
-		s.cfg.Server, s.cfg.Port,
-		s.cfg.BindDN, s.cfg.BindPW,
-		base, scope, filter, attrsStr,
+		"LDAP_PW_FILE=$(mktemp) && printf '%%s\\n' '%s' > \"$LDAP_PW_FILE\" && ldapsearch -z 0 -H ldap://%s:%d -D '%s' -y \"$LDAP_PW_FILE\" -b '%s' -s %s '%s' %s 2>&1; rm -f \"$LDAP_PW_FILE\"",
+		escapeSQ(s.cfg.BindPW), s.cfg.Server, s.cfg.Port,
+		escapeSQ(s.cfg.BindDN), base, scope, filter, attrsStr,
 	)
 	return s.exec.Execute(cmd).Output
 }
@@ -202,12 +206,7 @@ func (s *Service) SearchGroups(query string, limit int) ([]GroupResult, error) {
 // TestConnection probes the LDAP server with a base-scope search.
 func (s *Service) TestConnection() ConnectionStatus {
 	output := s.ldapsearch(s.cfg.BaseDN, "base", "(objectClass=*)", []string{"dn"})
-	status := ConnectionStatus{
-		LDAPServer: s.cfg.Server,
-		Domain:     s.cfg.Domain,
-		BaseDN:     s.cfg.BaseDN,
-		BindDN:     s.cfg.BindDN,
-	}
+	status := ConnectionStatus{Domain: s.cfg.Domain}
 	switch {
 	case strings.Contains(output, "Invalid credentials"):
 		status.Error = "Invalid credentials"
@@ -216,8 +215,9 @@ func (s *Service) TestConnection() ConnectionStatus {
 	case strings.Contains(strings.ToLower(output), "dn:"):
 		status.Connected = true
 	default:
-		if len(output) > 200 {
-			output = output[:200]
+		// Truncate raw ldapsearch output to avoid leaking internal details.
+		if len(output) > 100 {
+			output = output[:100] + "…"
 		}
 		status.Error = output
 	}
