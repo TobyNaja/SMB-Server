@@ -16,6 +16,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Samba runtime config — managed by the web UI, changes should not be version-controlled
+samba/shares.conf
+
 # Samba DB
 *.tdb
 
