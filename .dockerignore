@@ -1,0 +1,20 @@
+# Runtime data — mounted as volumes, not needed at build time
+data/
+
+# Samba config managed separately
+samba/shares.conf
+
+# Development artifacts
+.env
+*.local
+node_modules/
+frontend/.svelte-kit/
+frontend/build/
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md
+docs/
