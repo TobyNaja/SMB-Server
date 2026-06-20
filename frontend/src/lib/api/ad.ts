@@ -21,7 +21,6 @@ export interface ADGroup {
 export interface ADStatus {
 	domain: string;
 	connected: boolean;
-	error?: string;
 }
 
 export interface OU {

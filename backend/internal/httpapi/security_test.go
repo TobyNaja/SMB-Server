@@ -142,11 +142,14 @@ func TestADStatus_HidesSensitiveFields(t *testing.T) {
 	var body map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&body)
 
-	assert.NotContains(t, body, "ldap_server", "server IP must not be exposed")
-	assert.NotContains(t, body, "bind_dn", "BindDN must not be exposed")
-	assert.NotContains(t, body, "base_dn", "BaseDN must not be exposed")
+	assert.NotContains(t, body, "ldap_server")
+	assert.NotContains(t, body, "bind_dn")
+	assert.NotContains(t, body, "base_dn")
+	assert.NotContains(t, body, "error")
 	_, hasDomain := body["domain"]
 	assert.True(t, hasDomain, "domain field should be present")
+	_, hasConnected := body["connected"]
+	assert.True(t, hasConnected, "connected field should be present")
 }
 
 // TestADStatus_RequiresAuth verifies the endpoint is protected.

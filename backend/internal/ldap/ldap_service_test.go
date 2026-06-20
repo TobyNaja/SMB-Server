@@ -45,7 +45,6 @@ func TestTestConnection_Connected(t *testing.T) {
 	ce := newCE("dn: DC=test,DC=com\n")
 	status := newLDAPSvc(ce).TestConnection()
 	assert.True(t, status.Connected)
-	assert.Empty(t, status.Error)
 	assert.Equal(t, "TEST.COM", status.Domain)
 }
 
@@ -53,29 +52,25 @@ func TestTestConnection_InvalidCredentials(t *testing.T) {
 	ce := newCE("ldap_bind: Invalid credentials (49)")
 	status := newLDAPSvc(ce).TestConnection()
 	assert.False(t, status.Connected)
-	assert.Equal(t, "Invalid credentials", status.Error)
 }
 
 func TestTestConnection_CannotConnect(t *testing.T) {
 	ce := newCE("ldap_sasl_interactive_bind_s: Can't contact LDAP server (-1)")
 	status := newLDAPSvc(ce).TestConnection()
 	assert.False(t, status.Connected)
-	assert.Equal(t, "Cannot connect to LDAP server", status.Error)
 }
 
-func TestTestConnection_ErrorOutputTruncatedTo100(t *testing.T) {
+func TestTestConnection_UnknownOutputIsDisconnected(t *testing.T) {
 	ce := newCE(strings.Repeat("X", 150))
 	status := newLDAPSvc(ce).TestConnection()
 	assert.False(t, status.Connected)
-	assert.LessOrEqual(t, len(status.Error), 110, "error output must be truncated")
-	assert.Contains(t, status.Error, "…")
 }
 
 // ── ConnectionStatus JSON shape ─────────────────────────────────────────────
 
-// TestConnectionStatus_HidesSensitiveFields ensures the JSON response from
-// /api/ad/status never exposes server IP, BindDN, or BaseDN.
-func TestConnectionStatus_HidesSensitiveFields(t *testing.T) {
+// TestConnectionStatus_OnlyDomainAndConnected ensures the JSON response from
+// /api/ad/status exposes only domain + connected — no server details or error text.
+func TestConnectionStatus_OnlyDomainAndConnected(t *testing.T) {
 	ce := newCE("dn: DC=test,DC=com\n")
 	status := newLDAPSvc(ce).TestConnection()
 
@@ -83,11 +78,13 @@ func TestConnectionStatus_HidesSensitiveFields(t *testing.T) {
 	require.NoError(t, err)
 	body := string(data)
 
-	assert.NotContains(t, body, "ldap_server", "server IP must not appear in JSON")
-	assert.NotContains(t, body, "bind_dn", "BindDN must not appear in JSON")
-	assert.NotContains(t, body, "base_dn", "BaseDN must not appear in JSON")
-	assert.Contains(t, body, `"domain"`, "domain field must be present")
+	assert.NotContains(t, body, "ldap_server")
+	assert.NotContains(t, body, "bind_dn")
+	assert.NotContains(t, body, "base_dn")
+	assert.NotContains(t, body, "error")
+	assert.Contains(t, body, `"domain"`)
 	assert.Contains(t, body, "TEST.COM")
+	assert.Contains(t, body, `"connected"`)
 }
 
 // ── Command security ─────────────────────────────────────────────────────────

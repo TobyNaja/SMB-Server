@@ -141,9 +141,6 @@
 					</div>
 					<div class="space-y-1 text-xs text-gcp-muted">
 						<div>Domain: <span class="font-mono text-gcp-dark">{adStatus.domain}</span></div>
-						{#if !adStatus.connected && adStatus.error}
-							<div class="mt-2 text-gcp-red">{adStatus.error}</div>
-						{/if}
 					</div>
 				{:else}
 					<p class="text-sm text-gcp-muted">Unable to reach AD</p>

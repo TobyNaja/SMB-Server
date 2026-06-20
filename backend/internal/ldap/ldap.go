@@ -45,11 +45,10 @@ type OUResult struct {
 }
 
 // ConnectionStatus is the /api/ad/status response shape.
-// Only safe fields are exposed — no server addresses or bind credentials.
+// Only safe fields are exposed — no server addresses, bind credentials, or error details.
 type ConnectionStatus struct {
 	Domain    string `json:"domain"`
 	Connected bool   `json:"connected"`
-	Error     string `json:"error,omitempty"`
 }
 
 // Service executes ldapsearch inside the samba container and parses the LDIF output.
@@ -204,22 +203,12 @@ func (s *Service) SearchGroups(query string, limit int) ([]GroupResult, error) {
 }
 
 // TestConnection probes the LDAP server with a base-scope search.
+// Returns only domain + connected — no error details are exposed.
 func (s *Service) TestConnection() ConnectionStatus {
 	output := s.ldapsearch(s.cfg.BaseDN, "base", "(objectClass=*)", []string{"dn"})
 	status := ConnectionStatus{Domain: s.cfg.Domain}
-	switch {
-	case strings.Contains(output, "Invalid credentials"):
-		status.Error = "Invalid credentials"
-	case strings.Contains(output, "Can't contact"):
-		status.Error = "Cannot connect to LDAP server"
-	case strings.Contains(strings.ToLower(output), "dn:"):
+	if strings.Contains(strings.ToLower(output), "dn:") {
 		status.Connected = true
-	default:
-		// Truncate raw ldapsearch output to avoid leaking internal details.
-		if len(output) > 100 {
-			output = output[:100] + "…"
-		}
-		status.Error = output
 	}
 	return status
 }
