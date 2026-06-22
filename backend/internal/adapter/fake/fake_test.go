@@ -61,3 +61,33 @@ func TestInMemoryAuditLog_AppendAndQuery(t *testing.T) {
     limited, _ := l.Query(1, "", "")
     assert.Len(t, limited, 1)
 }
+
+func TestInMemoryAuthStore_ImplementsInterface(t *testing.T) {
+    var _ port.AuthStore = fake.NewAuthStore()
+}
+
+func TestInMemoryAuthStore_ErrorCases(t *testing.T) {
+    a := fake.NewAuthStore()
+    _ = a.Add("admin1", "pass1")
+
+    // duplicate add
+    assert.Equal(t, domain.ErrAlreadyExists, a.Add("admin1", "pass2"))
+
+    // verify correct / wrong password
+    assert.True(t, a.Verify("admin1", "pass1"))
+    assert.False(t, a.Verify("admin1", "wrong"))
+
+    // last admin cannot be deleted
+    assert.Equal(t, domain.ErrLastAdmin, a.Delete("admin1"))
+
+    // add second admin then delete first
+    _ = a.Add("admin2", "pass2")
+    assert.NoError(t, a.Delete("admin1"))
+
+    // delete nonexistent
+    assert.Equal(t, domain.ErrNotFound, a.Delete("admin1"))
+
+    // change password
+    assert.NoError(t, a.ChangePassword("admin2", "newpass"))
+    assert.True(t, a.Verify("admin2", "newpass"))
+}
