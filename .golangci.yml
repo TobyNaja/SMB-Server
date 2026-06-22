@@ -1,0 +1,20 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - gocritic
+    - noctx
+
+linters-settings:
+  goimports:
+    local-prefixes: smb-server/backend
+
+run:
+  timeout: 5m
+  tests: true

@@ -110,6 +110,16 @@ clean-all: ## Remove containers, images, AND volumes (destructive — loses shar
 	docker compose down -v
 	docker image prune -f
 
+lint-go: ## Run golangci-lint on backend
+	cd backend && golangci-lint run
+
+deploy: ## Deploy production stack
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+rollback: ## Restore previous image after failed deploy
+	docker tag smb-webapp:previous smb-webapp:latest
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
 # ── Help ──────────────────────────────────────────────────────────────────────
 
 help: ## Show this help

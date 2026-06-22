@@ -1,0 +1,52 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Go tests
+        run: cd backend && go test ./... -race -count=1
+
+      - name: Go lint
+        run: cd backend && golangci-lint run
+
+      - name: Frontend install
+        run: cd frontend && pnpm install --frozen-lockfile
+
+      - name: Frontend type-check
+        run: cd frontend && pnpm check
+
+      - name: Frontend lint
+        run: cd frontend && pnpm lint
+
+  deploy:
+    name: Deploy to Production
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag current image for rollback
+        run: docker tag smb-webapp:latest smb-webapp:previous 2>/dev/null || true
+
+      - name: Deploy
+        run: make deploy
+
+      - name: Health check
+        run: |
+          sleep 15
+          curl -sf http://localhost:8080/health || { make rollback; exit 1; }
