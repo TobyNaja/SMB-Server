@@ -1,5 +1,6 @@
 package domain
 
+// TODO(sprint-2): wire real samba adapter to port.ShareStore and retire samba.SyncPermissions.
 // SyncPermissions enforces permission priority rules (pure function — no I/O).
 //  1. invalid_users — removed from all other lists.
 //  2. admin_users   — removed from write/read; unioned into valid.
