@@ -72,3 +72,5 @@ func (f *CommandRunner) ReloadSamba() port.ExecResult {
     f.Calls = append(f.Calls, "ReloadSamba")
     return port.ExecResult{Success: true}
 }
+
+var _ port.CommandRunner = (*CommandRunner)(nil)
