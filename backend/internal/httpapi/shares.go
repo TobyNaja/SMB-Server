@@ -176,6 +176,12 @@ func (h *sharesHandlers) toggleABSE(c *fiber.Ctx) error {
 	}
 	p.SetShareABSE(name, enabled)
 	h.exec.ReloadSamba()
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+	h.auditSvc.Log("toggle_abse", actor(c), "share", name, status,
+		map[string]interface{}{"enabled": enabled}, c.IP())
 	return c.JSON(fiber.Map{"message": "ABSE updated"})
 }
 
