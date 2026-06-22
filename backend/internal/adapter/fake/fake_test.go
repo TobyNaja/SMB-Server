@@ -30,6 +30,14 @@ func TestInMemoryShareStore_CreateAndGet(t *testing.T) {
     assert.NoError(t, err)
     assert.Equal(t, "myshare", share.Name)
     assert.Equal(t, "/data/myshare", share.Path)
+
+    // duplicate create returns ErrAlreadyExists
+    err = s.CreateShare("myshare", "/data/myshare", "test share")
+    assert.Equal(t, domain.ErrAlreadyExists, err)
+
+    // missing share returns ErrNotFound
+    _, err2 := s.GetShare("nonexistent")
+    assert.Equal(t, domain.ErrNotFound, err2)
 }
 
 func TestInMemoryAuditLog_ImplementsInterface(t *testing.T) {
@@ -43,4 +51,13 @@ func TestInMemoryAuditLog_AppendAndQuery(t *testing.T) {
     assert.NoError(t, err)
     assert.Len(t, entries, 1)
     assert.Equal(t, "create_share", entries[0].Action)
+
+    // filter by action — wrong action returns empty
+    filtered, _ := l.Query(10, "delete_share", "")
+    assert.Len(t, filtered, 0)
+
+    // limit truncates oldest entries
+    l.Append(domain.NewAuditEntry("create_share", "admin", "share", "test2", "success", "127.0.0.1"))
+    limited, _ := l.Query(1, "", "")
+    assert.Len(t, limited, 1)
 }
