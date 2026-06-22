@@ -531,7 +531,7 @@
 							Guest {selected.guest_ok ? 'allowed' : 'off'}
 						</button>
 						<button onclick={toggleABSE} title="Click to toggle Access-Based Share Enumeration"
-							class="badge cursor-pointer {selected.abse
+							class="badge cursor-pointer transition-colors {selected.abse
 								? 'bg-purple-100 text-purple-800 hover:bg-purple-200'
 								: 'bg-gray-100 text-gcp-muted hover:bg-gray-200'}">
 							ABSE {selected.abse ? 'on' : 'off'}
