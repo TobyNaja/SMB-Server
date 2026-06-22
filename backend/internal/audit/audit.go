@@ -35,7 +35,7 @@ func (s *Service) ensureFile() error {
 		return err
 	}
 	if _, err := os.Stat(s.logPath); os.IsNotExist(err) {
-		return os.WriteFile(s.logPath, []byte("[]"), 0o644)
+		return os.WriteFile(s.logPath, []byte("[]"), 0o640)
 	}
 	return nil
 }
@@ -58,7 +58,7 @@ func (s *Service) save(entries []Entry) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.logPath, data, 0o644)
+	return os.WriteFile(s.logPath, data, 0o640)
 }
 
 // Log appends an audit entry (best effort — never returns an error to callers).
