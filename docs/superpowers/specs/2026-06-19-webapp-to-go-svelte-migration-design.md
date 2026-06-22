@@ -1,7 +1,16 @@
 # Migration Design: FastAPI `webapp/` → SvelteKit `frontend/` + Go Fiber `backend/`
 
 **Date:** 2026-06-19
-**Status:** Approved (ready for implementation planning)
+**Status:** ✅ Completed — merged via PR #3 (`migrate/frameworks` → `main`)
+
+## Known Gaps (post-merge — tracked for follow-up sprints)
+
+| Gap | Severity | Notes |
+|-----|----------|-------|
+| Audit logging not wired | HIGH | `auditSvc` not passed to shares/users/groups/auth/builtin handlers. Zero mutating actions logged. Fix: pass `auditSvc` to each `register*Routes()`, call `auditSvc.Log()` in every mutating handler. |
+| `audit.json` world-readable | MED | Saved `0o644` in `audit.go:61`. Change to `0o640`. |
+| `abseRequest` dead code | LOW | Struct at `shares.go:45` unused — `toggleABSE` reads `?enabled=` query param not body. Delete struct or migrate handler to use body. |
+| `delete` share no existence check | LOW | `shares.go:158` returns 200 even if share missing. Add `ShareExists` guard. |
 
 ## Goal
 
@@ -237,8 +246,8 @@ Then all five lists are sanitized (strip disallowed chars) and formatted back to
 7. **Package & verify:** multi-stage Dockerfile, docker-compose swap, full end-to-end
    pass; then retire `webapp/`.
 
-## Out of scope
+## Out of scope (migration only)
 
-- Changing Samba global config / `smb.conf` (still template-generated, read-only to UI).
+- Changing Samba global config / `smb.conf` (still template-generated, read-only to UI). *(ABSE sprint adds `access based share enum = yes` to template — tracked in ABSE spec.)*
 - New features beyond current parity (except the multi-admin fix already in the router).
 - Automated end-to-end / Samba-in-CI.

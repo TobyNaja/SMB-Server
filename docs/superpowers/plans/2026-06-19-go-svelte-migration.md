@@ -1,5 +1,8 @@
 # webapp → Go Fiber + SvelteKit Migration Implementation Plan
 
+> **Status: ✅ COMPLETED** — All parts shipped, merged via PR #3 to `main` on 2026-06-22.
+> Known gaps tracked in `docs/superpowers/specs/2026-06-19-webapp-to-go-svelte-migration-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Replace Python FastAPI `webapp/` with Go Fiber `backend/` (JSON API) + SvelteKit static SPA `frontend/`, deployed as a single Docker container — port 8080, drop-in for existing compose setup.
