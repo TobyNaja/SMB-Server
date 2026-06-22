@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"fmt"
+	"log"
 	"regexp"
 
 	"smb-server/backend/internal/audit"
@@ -170,18 +172,33 @@ func (h *sharesHandlers) delete(c *fiber.Ctx) error {
 func (h *sharesHandlers) toggleABSE(c *fiber.Ctx) error {
 	name := c.Params("name")
 	enabled := c.QueryBool("enabled")
+
 	p := h.parser()
-	if ok, _ := p.ShareExists(name); !ok {
+	share, err := p.GetShare(name)
+	if err != nil || share == nil {
 		return c.Status(404).JSON(fiber.Map{"detail": "Share not found"})
 	}
+
 	p.SetShareABSE(name, enabled)
+
+	mode := "0755"
+	if enabled {
+		mode = "0750"
+	}
+	// ponytail: chmod best-effort — ABSE works at Samba protocol level even without OS enforcement
+	if res := h.exec.Execute(fmt.Sprintf("chmod %s %s", mode, share.Path)); !res.Success {
+		log.Printf("toggleABSE chmod warn: %s", res.Output)
+	}
+
 	h.exec.ReloadSamba()
+
 	status := "disabled"
 	if enabled {
 		status = "enabled"
 	}
 	h.auditSvc.Log("toggle_abse", actor(c), "share", name, status,
 		map[string]interface{}{"enabled": enabled}, c.IP())
+
 	return c.JSON(fiber.Map{"message": "ABSE updated"})
 }
 
