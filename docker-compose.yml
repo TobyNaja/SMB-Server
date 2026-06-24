@@ -32,11 +32,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: smb-webapp
-    networks:
-      - smb-network
-    ports:
-      - "8080:8080"
+    network_mode: host
     volumes:
+      - ./resolv.conf:/etc/resolv.conf:ro
       - samba-data:/var/lib/samba
       - ./samba/shares.conf:/etc/samba/shares.conf
       - ./data/shared:/mnt/shared
