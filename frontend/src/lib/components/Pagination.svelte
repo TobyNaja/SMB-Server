@@ -47,7 +47,7 @@
 		{#if pageSizeOptions && onPageSizeChange}
 			<select
 				value={pageSize}
-				onchange={(e) => { onPageSizeChange((e.currentTarget as HTMLSelectElement).valueAsNumber); onPageChange(1); }}
+				onchange={(e) => { onPageSizeChange(parseInt((e.currentTarget as HTMLSelectElement).value, 10)); onPageChange(1); }}
 				class="rounded border border-gcp-border bg-white px-2 py-1 text-xs text-gcp-dark
 					focus:border-gcp-blue focus:outline-none"
 			>

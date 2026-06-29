@@ -308,6 +308,19 @@
 		}
 	}
 
+	async function toggleABSE() {
+		if (!selected) return;
+		const next = !selected.abse;
+		try {
+			await sharesApi.toggleABSE(selected.name, next);
+			selected = { ...selected, abse: next };
+			shares = shares.map(s => s.name === selected!.name ? { ...s, abse: next } : s);
+			toast(`ABSE ${next ? 'enabled' : 'disabled'}`);
+		} catch (e) {
+			toastError(e instanceof Error ? e.message : 'Failed to toggle ABSE');
+		}
+	}
+
 	function getUserList(share: Share, type: PermissionType): string[] {
 		const map: Record<PermissionType, string[] | null | undefined> = {
 			valid_users:   share.valid_users,
@@ -517,7 +530,12 @@
 								{selected.guest_ok ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-gray-100 text-gcp-muted hover:bg-gray-200'}">
 							Guest {selected.guest_ok ? 'allowed' : 'off'}
 						</button>
-						{#if selected.abse}<span class="badge bg-purple-100 text-purple-800">ABSE</span>{/if}
+						<button onclick={toggleABSE} title="Click to toggle Access-Based Share Enumeration"
+							class="badge cursor-pointer transition-colors {selected.abse
+								? 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+								: 'bg-gray-100 text-gcp-muted hover:bg-gray-200'}">
+							ABSE {selected.abse ? 'on' : 'off'}
+						</button>
 						{#if selected.comment}<span class="self-center text-xs text-gcp-muted">{selected.comment}</span>{/if}
 					</div>
 

@@ -1,8 +1,11 @@
 package httpapi
 
 import (
+	"fmt"
+	"log"
 	"regexp"
 
+	"smb-server/backend/internal/audit"
 	"smb-server/backend/internal/samba"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +17,7 @@ var ValidSharePath = regexp.MustCompile(`^/[a-zA-Z0-9/_-]+$`)
 type sharesHandlers struct {
 	exec       samba.Executor
 	configPath string
+	auditSvc   *audit.Service
 }
 
 type shareCreateRequest struct {
@@ -42,12 +46,8 @@ type permissionUpdateRequest struct {
 	PermissionType string   `json:"permission_type"`
 }
 
-type abseRequest struct {
-	Enabled bool `json:"enabled"`
-}
-
-func registerSharesRoutes(g fiber.Router, exec samba.Executor, configPath string) {
-	h := &sharesHandlers{exec: exec, configPath: configPath}
+func registerSharesRoutes(g fiber.Router, exec samba.Executor, configPath string, auditSvc *audit.Service) {
+	h := &sharesHandlers{exec: exec, configPath: configPath, auditSvc: auditSvc}
 	// Static routes before /:name
 	g.Get("/global", h.getGlobal)
 	g.Patch("/global", h.updateGlobal)
@@ -106,6 +106,7 @@ func (h *sharesHandlers) create(c *fiber.Ctx) error {
 	}
 	p.UpdateShare(req.Name, updates)
 	h.exec.ReloadSamba()
+	h.auditSvc.Log("create_share", actor(c), "share", req.Name, "success", nil, c.IP())
 	return c.Status(201).JSON(fiber.Map{"message": "Share '" + req.Name + "' created"})
 }
 
@@ -152,25 +153,52 @@ func (h *sharesHandlers) update(c *fiber.Ctx) error {
 	}
 	p.UpdateShare(name, updates)
 	h.exec.ReloadSamba()
+	h.auditSvc.Log("update_share", actor(c), "share", name, "success", nil, c.IP())
 	return c.JSON(fiber.Map{"message": "Share '" + name + "' updated"})
 }
 
 func (h *sharesHandlers) delete(c *fiber.Ctx) error {
 	name := c.Params("name")
-	h.parser().DeleteShare(name)
+	p := h.parser()
+	if ok, _ := p.ShareExists(name); !ok {
+		return c.Status(404).JSON(fiber.Map{"detail": "Share not found"})
+	}
+	p.DeleteShare(name)
 	h.exec.ReloadSamba()
+	h.auditSvc.Log("delete_share", actor(c), "share", name, "success", nil, c.IP())
 	return c.JSON(fiber.Map{"message": "Share '" + name + "' deleted"})
 }
 
 func (h *sharesHandlers) toggleABSE(c *fiber.Ctx) error {
 	name := c.Params("name")
 	enabled := c.QueryBool("enabled")
+
 	p := h.parser()
-	if ok, _ := p.ShareExists(name); !ok {
+	share, err := p.GetShare(name)
+	if err != nil || share == nil {
 		return c.Status(404).JSON(fiber.Map{"detail": "Share not found"})
 	}
+
 	p.SetShareABSE(name, enabled)
+
+	mode := "0755"
+	if enabled {
+		mode = "0750"
+	}
+	// ponytail: chmod best-effort — ABSE works at Samba protocol level even without OS enforcement
+	if res := h.exec.Execute(fmt.Sprintf("chmod %s %s", mode, share.Path)); !res.Success {
+		log.Printf("toggleABSE chmod warn: %s", res.Output)
+	}
+
 	h.exec.ReloadSamba()
+
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+	h.auditSvc.Log("toggle_abse", actor(c), "share", name, status,
+		map[string]interface{}{"enabled": enabled}, c.IP())
+
 	return c.JSON(fiber.Map{"message": "ABSE updated"})
 }
 
@@ -197,5 +225,7 @@ func (h *sharesHandlers) updatePermissions(c *fiber.Ctx) error {
 	}
 	setter(name, req.Users)
 	h.exec.ReloadSamba()
+	h.auditSvc.Log("update_permissions", actor(c), "share", name, "success",
+		map[string]interface{}{"permission_type": req.PermissionType}, c.IP())
 	return c.JSON(fiber.Map{"message": "Permissions updated"})
 }

@@ -35,7 +35,7 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, authSvc *auth.Service, exec
 	api := app.Group("/api")
 	registerUsersRoutes(api.Group("/users"), exec)
 	registerGroupsRoutes(api.Group("/groups"), exec)
-	registerSharesRoutes(api.Group("/shares"), exec, cfg.SambaConfigPath)
+	registerSharesRoutes(api.Group("/shares"), exec, cfg.SambaConfigPath, auditSvc)
 	registerADRoutes(api.Group("/ad"), exec, ldap.Config{
 		Server:  cfg.LDAPServer,
 		Port:    cfg.LDAPPort,
