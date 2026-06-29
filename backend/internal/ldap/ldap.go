@@ -73,7 +73,7 @@ func (s *Service) ldapsearch(base, scope, filter string, attrs []string) string 
 	// Write the bind password to a mktemp file so it never appears in `ps aux`.
 	// printf is a shell builtin — does not spawn a process visible in the process table.
 	cmd := fmt.Sprintf(
-		"LDAP_PW_FILE=$(mktemp) && printf '%%s\\n' '%s' > \"$LDAP_PW_FILE\" && ldapsearch -z 0 -H ldap://%s:%d -D '%s' -y \"$LDAP_PW_FILE\" -b '%s' -s %s '%s' %s 2>&1; rm -f \"$LDAP_PW_FILE\"",
+		"LDAP_PW_FILE=$(mktemp) && printf '%%s' '%s' > \"$LDAP_PW_FILE\" && ldapsearch -z 0 -H ldap://%s:%d -D '%s' -y \"$LDAP_PW_FILE\" -b '%s' -s %s '%s' %s 2>&1; rm -f \"$LDAP_PW_FILE\"",
 		escapeSQ(s.cfg.BindPW), s.cfg.Server, s.cfg.Port,
 		escapeSQ(s.cfg.BindDN), base, scope, filter, attrsStr,
 	)
