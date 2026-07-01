@@ -209,6 +209,8 @@ func (p *SmbConfParser) CreateShare(name, path, comment string) bool {
 		"directory mask":           "0775",
 		"force create mode":        "0777",
 		"force directory mode":     "0777",
+		"force user":               "smbshare",
+		"force group":              "smbshare",
 		"valid users":              "",
 	}
 	_ = p.save()
