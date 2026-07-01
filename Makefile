@@ -1,5 +1,5 @@
 .PHONY: up down restart build build-be logs logs-be logs-samba ps \
-        test test-fe lint-fe shell-be shell-samba audit add-admin clean help
+        test test-fe lint-fe shell-be shell-samba audit add-admin clean help fix-perms
 
 # ── Core ──────────────────────────────────────────────────────────────────────
 
@@ -92,6 +92,10 @@ show-admins: ## Print admin usernames currently in .admin (passwords are bcrypt-
 	@docker compose exec backend sh -c 'cat /mnt/shared/.admin 2>/dev/null || echo "(no .admin file — run: make reset-admin USER=admin PASS=yourpassword)"' \
 		| python3 -c "import sys,json; [print('  •', a['username'], '  created:', a.get('created_at','?')) for a in json.load(sys.stdin)]" 2>/dev/null \
 		|| echo "(could not parse .admin file)"
+
+fix-perms: ## Re-own existing share dirs to smbshare:smbshare 2770 (one-time remediation)
+	docker cp samba/fix-share-perms.sh samba-server:/tmp/fix-share-perms.sh
+	docker exec samba-server bash /tmp/fix-share-perms.sh
 
 setup-env: ## Copy .env.example to .env (if .env doesn't exist)
 	@test -f .env && echo ".env already exists" || (cp .env.example .env && echo "Created .env — fill in SECRET_KEY and LDAP_BIND_PW")

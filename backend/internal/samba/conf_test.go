@@ -107,3 +107,13 @@ func TestGetGlobal(t *testing.T) {
 	g := p.GetGlobal()
 	assert.Equal(t, "IT", g["workgroup"])
 }
+
+func TestCreateShare_WritesForceUserAndGroup(t *testing.T) {
+	p, sharesPath := newParser(t)
+	require.True(t, p.CreateShare("forced", "/srv/forced", ""))
+
+	data, err := os.ReadFile(sharesPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "force user = smbshare")
+	assert.Contains(t, string(data), "force group = smbshare")
+}
