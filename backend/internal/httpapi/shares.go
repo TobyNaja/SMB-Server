@@ -90,8 +90,12 @@ func (h *sharesHandlers) create(c *fiber.Ctx) error {
 	if !ValidSharePath.MatchString(req.Path) {
 		return c.Status(400).JSON(fiber.Map{"detail": "invalid path: must be absolute and contain only [a-zA-Z0-9/_-]"})
 	}
-	// mkdir + chmod in samba container (path is validated above — no injection risk)
-	h.exec.Execute("mkdir -p " + req.Path + " && chmod 770 " + req.Path)
+	// path is validated by ValidSharePath above — no shell metacharacters, safe to concat.
+	// Owned by the smbshare service account (see force user/group in CreateShare defaults);
+	// 2770 = setgid + rwx for owner/group, nothing for others.
+	h.exec.Execute("mkdir -p " + req.Path +
+		" && chown smbshare:smbshare " + req.Path +
+		" && chmod 2770 " + req.Path)
 
 	p := h.parser()
 	if !p.CreateShare(req.Name, req.Path, req.Comment) {

@@ -219,6 +219,22 @@ func TestToggleABSE_ChmodCalledOnEnable(t *testing.T) {
 	assert.Contains(t, exec.Calls, "chmod 0750 /data/chmodtest")
 }
 
+func TestShareCreate_ChownsAndSetgidDir(t *testing.T) {
+	app, exec := setupTestAppWithExecutor(t)
+	token := loginAndGetToken(t, app)
+
+	body := `{"name":"perms","path":"/data/perms","comment":""}`
+	req := httptest.NewRequest("POST", "/api/shares", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, 201, resp.StatusCode)
+
+	assert.Contains(t, exec.Calls,
+		"mkdir -p /data/perms && chown smbshare:smbshare /data/perms && chmod 2770 /data/perms")
+}
+
 func TestCreateShare_WritesAuditEntry(t *testing.T) {
 	app, auditSvc := setupTestAppWithAudit(t)
 	token := loginAndGetToken(t, app)
