@@ -14,6 +14,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Dedicated non-login owner for all share directories.
+# Fixed uid/gid so on-disk ownership stays stable across image rebuilds
+# (the /var/lib/samba + share data volumes persist).
+RUN groupadd -g 1500 smbshare && \
+    useradd -u 1500 -g 1500 -M -s /usr/sbin/nologin smbshare
+
 COPY entrypoint.sh /entrypoint.sh
 COPY smb.conf.template /smb.conf.template
 COPY krb5.conf /etc/krb5.conf
