@@ -196,3 +196,29 @@ func TestSubfolderPermissions_RejectsShellInjection(t *testing.T) {
 		"/api/shares/injtest/subfolders/permissions",
 		`{"subfolder_path":"Secret_Plan","username":"alice","permissions":"rx"}`))
 }
+
+// TestSubfolderLock_Validation covers the guardrails on the lock/unlock endpoints.
+func TestSubfolderLock_Validation(t *testing.T) {
+	app := setupTestApp(t)
+	token := loginAndGetToken(t, app)
+	require.Equal(t, 201, postJSON(t, app, token, "/api/shares",
+		`{"name":"lk","path":"/mnt/shared/lk"}`))
+
+	// Locking the share root is refused (would wall off the whole share).
+	assert.Equal(t, 400, postJSON(t, app, token, "/api/shares/lk/subfolders/lock",
+		`{"subfolder_path":".","users":["alice"]}`))
+
+	// A username with shell metacharacters is rejected.
+	assert.Equal(t, 400, postJSON(t, app, token, "/api/shares/lk/subfolders/lock",
+		`{"subfolder_path":"Secret","users":["a;b"]}`))
+
+	// An injection path is rejected.
+	assert.Equal(t, 400, postJSON(t, app, token, "/api/shares/lk/subfolders/lock",
+		`{"subfolder_path":"x'$(id)'","users":["alice"]}`))
+
+	// A well-formed lock and unlock succeed (FakeExecutor returns success).
+	assert.Equal(t, 200, postJSON(t, app, token, "/api/shares/lk/subfolders/lock",
+		`{"subfolder_path":"Secret","users":["alice"],"permissions":"rx"}`))
+	assert.Equal(t, 200, postJSON(t, app, token, "/api/shares/lk/subfolders/unlock",
+		`{"subfolder_path":"Secret"}`))
+}

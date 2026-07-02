@@ -60,6 +60,8 @@ func registerSharesRoutes(g fiber.Router, exec samba.Executor, configPath string
 	g.Delete("/:name", h.delete)
 	g.Get("/:name/subfolders/permissions", h.getSubfolderPermissions)
 	g.Post("/:name/subfolders/permissions", h.updateSubfolderPermissions)
+	g.Post("/:name/subfolders/lock", h.lockSubfolder)
+	g.Post("/:name/subfolders/unlock", h.unlockSubfolder)
 }
 
 func (h *sharesHandlers) parser() *samba.SmbConfParser {

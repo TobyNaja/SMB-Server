@@ -77,7 +77,7 @@ export const sharesApi = {
 	// Subfolder (POSIX ACL) permissions. `path` is relative to the share root;
 	// empty/"." targets the root itself.
 	getSubfolderPermissions: (name: string, path: string) =>
-		get<{ share: string; path: string; entries: SubfolderAclEntry[] | null }>(
+		get<{ share: string; path: string; entries: SubfolderAclEntry[] | null; locked: boolean }>(
 			`/api/shares/${name}/subfolders/permissions?path=${encodeURIComponent(path || '.')}`
 		),
 
@@ -85,6 +85,17 @@ export const sharesApi = {
 		name: string,
 		data: { subfolder_path: string; username: string; permissions: SubfolderPerm; recursive?: boolean }
 	) => post<{ message: string }>(`/api/shares/${name}/subfolders/permissions`, data),
+
+	// Make a subfolder private to exactly `users` (empty = owner only), shutting
+	// everyone else out and hiding it from their view.
+	lockSubfolder: (
+		name: string,
+		data: { subfolder_path: string; users: string[]; permissions?: SubfolderPerm; recursive?: boolean }
+	) => post<{ message: string }>(`/api/shares/${name}/subfolders/lock`, data),
+
+	// Reopen a locked subfolder to the share's valid users.
+	unlockSubfolder: (name: string, data: { subfolder_path: string; recursive?: boolean }) =>
+		post<{ message: string }>(`/api/shares/${name}/subfolders/unlock`, data),
 
 	getGlobal: () => get<GlobalSettings>('/api/shares/global')
 };

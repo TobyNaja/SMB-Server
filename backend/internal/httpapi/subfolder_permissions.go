@@ -27,6 +27,19 @@ type subfolderPermissionRequest struct {
 	Recursive     bool   `json:"recursive"`
 }
 
+// subfolderLockRequest makes a subfolder private to exactly the listed users.
+type subfolderLockRequest struct {
+	SubfolderPath string   `json:"subfolder_path"`
+	Users         []string `json:"users"`       // exact allowlist (empty = owner only)
+	Permissions   string   `json:"permissions"` // perms per allowed user; default "rx"
+	Recursive     bool     `json:"recursive"`
+}
+
+type subfolderUnlockRequest struct {
+	SubfolderPath string `json:"subfolder_path"`
+	Recursive     bool   `json:"recursive"`
+}
+
 // resolveSubfolder validates the path stays inside the share root.
 func (h *sharesHandlers) resolveSubfolder(name, sub string) (base, target, rel string, err error) {
 	p := h.parser()
@@ -83,11 +96,11 @@ func (h *sharesHandlers) updateSubfolderPermissions(c *fiber.Ctx) error {
 			recursiveFlag, qUser, qPath,
 		)
 	} else {
-		// access ACL + default ACL (inheritance) in one call
-		cmd = fmt.Sprintf(
-			"setfacl %s-m u:%s:%s,d:u:%s:%s %s",
-			recursiveFlag, qUser, perms, qUser, perms, qPath,
-		)
+		// Access ACL recurses if asked; the default ACL (inheritance) is valid on
+		// directories only, so it must never carry -R — setfacl errors on regular
+		// files when handed a default entry, which would abort the whole && chain.
+		cmd = fmt.Sprintf("setfacl %s-m u:%s:%s %s", recursiveFlag, qUser, perms, qPath)
+		cmd += fmt.Sprintf(" && setfacl -m d:u:%s:%s %s", qUser, perms, qPath)
 		// grant traverse (x) up the parent chain so the user can reach it
 		dir := filepath.Dir(targetPath)
 		for strings.HasPrefix(dir, basePath) && dir != basePath {
@@ -126,10 +139,18 @@ func (h *sharesHandlers) getSubfolderPermissions(c *fiber.Ctx) error {
 		Default bool   `json:"default"` // inheritance entry
 	}
 	var entries []aclEntry
+	otherPerms := "" // access "other::" class — drives the locked flag
 	for _, line := range strings.Split(out, "\n") {
 		line = strings.TrimSpace(line)
 		isDefault := strings.HasPrefix(line, "default:")
 		line = strings.TrimPrefix(line, "default:")
+		// The access other:: class tells us whether unauthorized users are shut out.
+		if !isDefault && strings.HasPrefix(line, "other::") {
+			otherPerms = strings.SplitN(line, "::", 2)[1]
+			if i := strings.IndexAny(otherPerms, " \t#"); i >= 0 {
+				otherPerms = otherPerms[:i]
+			}
+		}
 		parts := strings.Split(line, ":")
 		if len(parts) < 3 {
 			continue
@@ -149,5 +170,138 @@ func (h *sharesHandlers) getSubfolderPermissions(c *fiber.Ctx) error {
 			Type: kind, Name: nameField, Perms: permField, Default: isDefault,
 		})
 	}
-	return c.JSON(fiber.Map{"share": name, "path": rel, "entries": entries})
+	// Locked = unauthorized users have no traverse/read via the other:: class.
+	locked := !strings.ContainsAny(otherPerms, "rx")
+	return c.JSON(fiber.Map{"share": name, "path": rel, "entries": entries, "locked": locked})
+}
+
+// aclSpec turns a Samba user/group token into a setfacl principal spec.
+// "@grp" -> g:'grp'  ;  "IT\user" -> u:'IT\user'. The name is single-quoted;
+// callers must pre-validate it with subfolderValidUser (no quote chars pass).
+func aclSpec(u string) string {
+	if strings.HasPrefix(u, "@") {
+		return "g:'" + strings.TrimPrefix(u, "@") + "'"
+	}
+	return "u:'" + u + "'"
+}
+
+// buildLockCmd wipes a subfolder's ACL, shuts out "other", then grants exactly
+// the allowlist (access + default ACL) plus traverse (x) up the parent chain.
+func buildLockCmd(recursiveFlag, base, target, perms string, users []string) string {
+	qTarget := "'" + target + "'"
+	var b strings.Builder
+	fmt.Fprintf(&b, "setfacl %s-b %s && chmod %so= %s", recursiveFlag, qTarget, recursiveFlag, qTarget)
+	for _, u := range users {
+		qUser := "'" + u + "'"
+		// Access ACL — recurse into existing contents when asked.
+		fmt.Fprintf(&b, " && setfacl %s-m u:%s:%s %s", recursiveFlag, qUser, perms, qTarget)
+		// Default ACL drives inheritance and is valid on directories only, so it must
+		// never carry -R (setfacl errors on regular files with a default entry).
+		fmt.Fprintf(&b, " && setfacl -m d:u:%s:%s %s", qUser, perms, qTarget)
+		// grant traverse (x) on every ancestor up to and including the share root
+		dir := filepath.Dir(target)
+		for strings.HasPrefix(dir, base) && dir != base {
+			fmt.Fprintf(&b, " && setfacl -m u:%s:x '%s'", qUser, dir)
+			dir = filepath.Dir(dir)
+		}
+		fmt.Fprintf(&b, " && setfacl -m u:%s:x '%s'", qUser, base)
+	}
+	return b.String()
+}
+
+// buildUnlockCmd clears the private ACL, reopens the "other" class, and re-grants
+// the share's valid users (mirrors sync-share-acl.sh so the folder rejoins "open").
+func buildUnlockCmd(recursiveFlag, target string, validUsers []string) string {
+	qTarget := "'" + target + "'"
+	var b strings.Builder
+	fmt.Fprintf(&b, "setfacl %s-b %s && chmod %so+rX %s", recursiveFlag, qTarget, recursiveFlag, qTarget)
+	for _, u := range validUsers {
+		u = strings.TrimSpace(u)
+		if u == "" || !subfolderValidUser.MatchString(u) {
+			continue
+		}
+		spec := aclSpec(u)
+		fmt.Fprintf(&b, " && setfacl %s-m %s:rwX %s", recursiveFlag, spec, qTarget)
+		fmt.Fprintf(&b, " && setfacl -m d:%s:rwX %s", spec, qTarget)
+	}
+	return b.String()
+}
+
+func (h *sharesHandlers) lockSubfolder(c *fiber.Ctx) error {
+	name := c.Params("name")
+	var req subfolderLockRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"detail": "invalid request body"})
+	}
+
+	perms := strings.TrimSpace(req.Permissions)
+	if perms == "" {
+		perms = "rx"
+	}
+	if !subfolderValidPerms.MatchString(perms) {
+		return c.Status(400).JSON(fiber.Map{"detail": "permissions must be an ordered subset of rwx"})
+	}
+
+	users := make([]string, 0, len(req.Users))
+	for _, u := range req.Users {
+		u = strings.TrimSpace(u)
+		if u == "" {
+			continue
+		}
+		if !subfolderValidUser.MatchString(u) {
+			return c.Status(400).JSON(fiber.Map{"detail": "invalid username: " + u})
+		}
+		users = append(users, u)
+	}
+
+	basePath, targetPath, rel, err := h.resolveSubfolder(name, req.SubfolderPath)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"detail": err.Error()})
+	}
+	// Locking the share root would wall off the entire share — refuse it.
+	if rel == "." {
+		return c.Status(400).JSON(fiber.Map{"detail": "cannot lock the share root; choose a subfolder"})
+	}
+
+	recursiveFlag := ""
+	if req.Recursive {
+		recursiveFlag = "-R "
+	}
+	cmd := buildLockCmd(recursiveFlag, basePath, targetPath, perms, users)
+	if out, err := h.exec.ExecuteOutput(cmd); err != nil {
+		return c.Status(500).JSON(fiber.Map{"detail": "lock failed: " + out})
+	}
+	h.auditSvc.Log("lock_subfolder", actor(c), "share", name, "success",
+		map[string]interface{}{"path": rel, "users": users}, c.IP())
+	return c.JSON(fiber.Map{"message": fmt.Sprintf("locked %q to %d user(s)", rel, len(users))})
+}
+
+func (h *sharesHandlers) unlockSubfolder(c *fiber.Ctx) error {
+	name := c.Params("name")
+	var req subfolderUnlockRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"detail": "invalid request body"})
+	}
+
+	_, targetPath, rel, err := h.resolveSubfolder(name, req.SubfolderPath)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"detail": err.Error()})
+	}
+
+	valid := []string{}
+	if share, _ := h.parser().GetShare(name); share != nil {
+		valid = share.ValidUsers
+	}
+
+	recursiveFlag := ""
+	if req.Recursive {
+		recursiveFlag = "-R "
+	}
+	cmd := buildUnlockCmd(recursiveFlag, targetPath, valid)
+	if out, err := h.exec.ExecuteOutput(cmd); err != nil {
+		return c.Status(500).JSON(fiber.Map{"detail": "unlock failed: " + out})
+	}
+	h.auditSvc.Log("unlock_subfolder", actor(c), "share", name, "success",
+		map[string]interface{}{"path": rel}, c.IP())
+	return c.JSON(fiber.Map{"message": fmt.Sprintf("unlocked %q", rel)})
 }
