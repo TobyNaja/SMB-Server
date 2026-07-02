@@ -161,3 +161,38 @@ func TestADStatus_RequiresAuth(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 401, resp.StatusCode)
 }
+
+// ── Subfolder ACL path — shell injection guard ──────────────────────────────
+
+// postJSON is a small helper for authenticated JSON POSTs.
+func postJSON(t *testing.T, app *fiber.App, token, path, body string) int {
+	t.Helper()
+	req := httptest.NewRequest("POST", path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	return resp.StatusCode
+}
+
+// TestSubfolderPermissions_RejectsShellInjection verifies that a subfolder path
+// carrying shell metacharacters is rejected before any command is executed,
+// while a clean relative path is accepted.
+func TestSubfolderPermissions_RejectsShellInjection(t *testing.T) {
+	app := setupTestApp(t)
+	token := loginAndGetToken(t, app)
+
+	// A share must exist so resolveSubfolder gets past the share lookup.
+	require.Equal(t, 201, postJSON(t, app, token, "/api/shares",
+		`{"name":"injtest","path":"/mnt/shared/injtest"}`))
+
+	// Command-substitution attempt must be rejected (400), not executed.
+	assert.Equal(t, 400, postJSON(t, app, token,
+		"/api/shares/injtest/subfolders/permissions",
+		`{"subfolder_path":"x'$(reboot)'","username":"alice","permissions":"rx"}`))
+
+	// A clean relative path is accepted (FakeExecutor returns success).
+	assert.Equal(t, 200, postJSON(t, app, token,
+		"/api/shares/injtest/subfolders/permissions",
+		`{"subfolder_path":"Secret_Plan","username":"alice","permissions":"rx"}`))
+}

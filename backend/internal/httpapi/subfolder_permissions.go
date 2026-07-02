@@ -14,6 +14,10 @@ var (
 	subfolderValidPerms = regexp.MustCompile(`^r?w?x?$`)
 	// username: block shell metachars / quotes; allow DOMAIN\user, dots, @, space
 	subfolderValidUser = regexp.MustCompile(`^[A-Za-z0-9_.@\\ -]+$`)
+	// subfolder path: allowlist only — folder names, slashes, spaces, dots, dashes.
+	// Blocks quotes/$/;/backtick etc. so the value is safe to single-quote in a
+	// shell command. Empty = share root. Traversal is caught separately by Rel.
+	subfolderValidPath = regexp.MustCompile(`^[A-Za-z0-9 ._/-]*$`)
 )
 
 type subfolderPermissionRequest struct {
@@ -29,6 +33,9 @@ func (h *sharesHandlers) resolveSubfolder(name, sub string) (base, target, rel s
 	share, err := p.GetShare(name)
 	if err != nil || share == nil {
 		return "", "", "", fmt.Errorf("share not found")
+	}
+	if !subfolderValidPath.MatchString(sub) {
+		return "", "", "", fmt.Errorf("invalid subfolder path")
 	}
 	base = share.Path
 	target = filepath.Join(base, filepath.Clean("/"+sub))
