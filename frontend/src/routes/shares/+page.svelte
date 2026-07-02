@@ -8,7 +8,8 @@
 	import { toast, toastError } from '$lib/stores/toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
-	import { Folder, FolderOpen, Plus, Search, X, HelpCircle } from 'lucide-svelte';
+	import SubfolderPermissionsModal from '$lib/components/SubfolderPermissionsModal.svelte';
+	import { Folder, FolderOpen, FolderTree, Plus, Search, X, HelpCircle } from 'lucide-svelte';
 
 	let shares     = $state<Share[]>([]);
 	let loading    = $state(true);
@@ -39,6 +40,9 @@
 
 	// Help modal
 	let showHelp = $state(false);
+
+	// Subfolder-permissions modal
+	let showSubfolder = $state(false);
 
 	// Autocomplete dropdown state
 	let selectedIdx = $state(-1);
@@ -346,6 +350,9 @@
 	oncancel={() => (confirmOpen = false)}
 />
 
+<!-- Subfolder permissions modal -->
+<SubfolderPermissionsModal open={showSubfolder} share={selected} onclose={() => (showSubfolder = false)} />
+
 <!-- Help modal -->
 {#if showHelp}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -510,6 +517,13 @@
 						<h2 class="text-sm font-semibold text-gcp-dark">{selected.name}</h2>
 						<p class="text-xs text-gcp-muted">{selected.path}</p>
 					</div>
+					<button
+						onclick={() => (showSubfolder = true)}
+						class="flex flex-none items-center gap-1 rounded border border-gcp-border bg-white px-2.5 py-1.5
+							text-xs text-gcp-dark hover:bg-gcp-bg transition-colors"
+					>
+						<FolderTree size={12} /> Subfolder permissions
+					</button>
 				</div>
 
 				<div class="p-5">

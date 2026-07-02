@@ -19,6 +19,17 @@ export interface Share {
 
 export type PermissionType = 'valid_users' | 'write_list' | 'read_list' | 'admin_users' | 'invalid_users';
 
+// One line of `getfacl` output: a POSIX ACL entry on a subfolder.
+export interface SubfolderAclEntry {
+	type: 'user' | 'group';
+	name: string;    // empty = owner / owning-group entry (not editable)
+	perms: string;   // e.g. "rwx", "r-x"
+	default: boolean; // inheritance entry (applies to newly created children)
+}
+
+// Ordered subset of rwx that the backend accepts; "none" removes the entry.
+export type SubfolderPerm = 'r' | 'rx' | 'rwx' | 'none';
+
 export interface GlobalSettings {
 	workgroup: string;
 	realm: string;
@@ -62,6 +73,18 @@ export const sharesApi = {
 
 	toggleABSE: (name: string, enabled: boolean) =>
 		patch<{ message: string }>(`/api/shares/${name}/abse?enabled=${enabled}`),
+
+	// Subfolder (POSIX ACL) permissions. `path` is relative to the share root;
+	// empty/"." targets the root itself.
+	getSubfolderPermissions: (name: string, path: string) =>
+		get<{ share: string; path: string; entries: SubfolderAclEntry[] | null }>(
+			`/api/shares/${name}/subfolders/permissions?path=${encodeURIComponent(path || '.')}`
+		),
+
+	setSubfolderPermission: (
+		name: string,
+		data: { subfolder_path: string; username: string; permissions: SubfolderPerm; recursive?: boolean }
+	) => post<{ message: string }>(`/api/shares/${name}/subfolders/permissions`, data),
 
 	getGlobal: () => get<GlobalSettings>('/api/shares/global')
 };
