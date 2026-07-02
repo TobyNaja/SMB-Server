@@ -33,9 +33,3 @@ RUN chmod +x /entrypoint.sh && \
 EXPOSE 137/udp 138/udp 139/tcp 445/tcp
 
 ENTRYPOINT ["/entrypoint.sh"]
-
-# --- POSIX ACL support for per-subfolder permissions ---
-RUN apt-get update && apt-get install -y acl && rm -rf /var/lib/apt/lists/*
-COPY sync-share-acl.sh /usr/local/bin/sync-share-acl.sh
-COPY migrate-acl.sh /usr/local/bin/migrate-acl.sh
-RUN chmod +x /usr/local/bin/sync-share-acl.sh /usr/local/bin/migrate-acl.sh

@@ -32,6 +32,7 @@ type UserInfo struct {
 // Implementations: dockerExecutor (live), FakeExecutor (tests).
 type Executor interface {
 	Execute(command string) ExecResult
+	ExecuteOutput(command string) (string, error)
 	// ExecuteWithInput runs cmd directly (no shell wrapper) with input piped to stdin.
 	// Use for secrets that must never appear in a process argument list (ps aux).
 	ExecuteWithInput(cmd []string, input string) ExecResult
@@ -320,4 +321,23 @@ func (f *FakeExecutor) GetGroups() []string  { return f.Groups }
 func (f *FakeExecutor) ReloadSamba() ExecResult {
 	f.Calls = append(f.Calls, "ReloadSamba")
 	return ExecResult{Success: true}
+}
+
+// ExecuteOutput wraps Execute and returns (output, error) for callers
+// that need to distinguish stdout from error status.
+func (e *dockerExecutor) ExecuteOutput(command string) (string, error) {
+	r := e.Execute(command)
+	if !r.Success {
+		return r.Output, fmt.Errorf("exit code %d: %s", r.ExitCode, r.Output)
+	}
+	return r.Output, nil
+}
+
+// ExecuteOutput on FakeExecutor delegates to Execute so test stubs keep working.
+func (f *FakeExecutor) ExecuteOutput(cmd string) (string, error) {
+	r := f.Execute(cmd)
+	if !r.Success {
+		return r.Output, fmt.Errorf("exit code %d: %s", r.ExitCode, r.Output)
+	}
+	return r.Output, nil
 }

@@ -131,6 +131,3 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*##"}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 .DEFAULT_GOAL := help
-
-migrate-acl:
-	docker exec samba-server /usr/local/bin/migrate-acl.sh
